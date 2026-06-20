@@ -13,6 +13,7 @@ void main() {
         isTrue,
       );
       expect(File('pubspec.harness.snippet.yaml').existsSync(), isTrue);
+      expect(File('tool/install_harness.dart').existsSync(), isTrue);
       expect(File('tool/harness.dart').existsSync(), isTrue);
       expect(File('tool/agent_harness/pubspec.yaml').existsSync(), isTrue);
     },

@@ -21,9 +21,44 @@ This starter deliberately excludes TV/D-pad navigation, focus graphs, permanent 
 
 The harness package is isolated under `tool/agent_harness`; its analyzer/tooling dependencies are not added to the application's dependency graph.
 
-## Install into an existing Flutter project
+## Install into an existing Flutter project as a submodule
 
-Copy these paths into the project root:
+From an existing Flutter project that is already a Git repository, run the installer from a local checkout of this harness:
+
+```bash
+dart /path/to/flutter_agentic_harness/tool/install_harness.dart
+```
+
+By default, the installer:
+
+- adds this repository as a submodule at `tool/flutter_agentic_harness`;
+- writes a project-local `tool/harness.dart` launcher that delegates to the submodule;
+- writes `AGENTS.md`, `.agent_harness.yaml`, `.agent_harness/baseline.json`, and `analysis_options.yaml`;
+- runs `flutter pub add flutter_bloc get_it`;
+- runs `flutter pub add --dev very_good_analysis:10.2.0`.
+
+Useful options:
+
+```bash
+dart /path/to/flutter_agentic_harness/tool/install_harness.dart --help
+dart /path/to/flutter_agentic_harness/tool/install_harness.dart --force
+dart /path/to/flutter_agentic_harness/tool/install_harness.dart --skip-pub-add
+dart /path/to/flutter_agentic_harness/tool/install_harness.dart --repo https://github.com/ChabanovX/flutter-harness.git
+```
+
+Then run:
+
+```bash
+dart run tool/harness.dart doctor
+dart run tool/harness.dart init
+dart run tool/harness.dart verify --all
+```
+
+The launcher performs `dart pub get` inside the submodule's `tool/agent_harness` package on first use or after that package's `pubspec.yaml` changes.
+
+## Manual copy install
+
+If submodules are not appropriate, copy these paths into the project root:
 
 ```text
 AGENTS.md
@@ -42,7 +77,7 @@ dart run tool/harness.dart init
 dart run tool/harness.dart verify --all
 ```
 
-The launcher performs `dart pub get` inside `tool/agent_harness` on its first run or after that package's `pubspec.yaml` changes.
+The copied launcher performs `dart pub get` inside `tool/agent_harness` on its first run or after that package's `pubspec.yaml` changes.
 
 For a project with existing architecture debt, create a migration baseline once:
 
