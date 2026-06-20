@@ -19,8 +19,9 @@ Future<void> main(List<String> arguments) async {
     );
     await installer.run();
   } on UsageException catch (error) {
-    stderr.writeln(error.message);
-    stderr.write(usage);
+    stderr
+      ..writeln(error.message)
+      ..write(usage);
     exitCode = 64;
   } on InstallException catch (error) {
     stderr.writeln(error.message);
@@ -39,15 +40,7 @@ final class InstallOptions {
     required this.help,
   });
 
-  final Directory projectRoot;
-  final String? repositoryUrl;
-  final String submodulePath;
-  final String? branch;
-  final bool force;
-  final bool skipPubAdd;
-  final bool help;
-
-  static InstallOptions parse(List<String> arguments) {
+  factory InstallOptions.parse(List<String> arguments) {
     var projectRoot = Directory.current;
     String? repositoryUrl;
     var submodulePath = defaultSubmodulePath;
@@ -113,6 +106,14 @@ final class InstallOptions {
     );
   }
 
+  final Directory projectRoot;
+  final String? repositoryUrl;
+  final String submodulePath;
+  final String? branch;
+  final bool force;
+  final bool skipPubAdd;
+  final bool help;
+
   static void _requireValue(List<String> arguments, int index, String option) {
     if (index >= arguments.length) {
       throw UsageException('$option requires a value.');
@@ -131,8 +132,7 @@ final class HarnessInstaller {
     _validateFlutterProject(projectRoot);
     await _validateGitProject(projectRoot);
 
-    final repositoryUrl =
-        options.repositoryUrl ?? await _inferRepositoryUrl(harnessRoot);
+    final repositoryUrl = options.repositoryUrl ?? await _inferRepositoryUrl(harnessRoot);
     await _ensureSubmodule(
       projectRoot: projectRoot,
       repositoryUrl: repositoryUrl,
@@ -150,23 +150,24 @@ final class HarnessInstaller {
       await _addApplicationDependencies(projectRoot);
     }
 
-    stdout.writeln(
-      'Harness installed as submodule at ${options.submodulePath}.',
-    );
-    stdout.writeln('Next: dart run tool/harness.dart doctor');
+    stdout
+      ..writeln(
+        'Harness installed as submodule at ${options.submodulePath}.',
+      )
+      ..writeln('Next: dart run tool/harness.dart doctor');
   }
 
   void _validateFlutterProject(Directory projectRoot) {
     final pubspec = File(_join(projectRoot.path, 'pubspec.yaml'));
     if (!pubspec.existsSync()) {
-      throw InstallException(
+      throw const InstallException(
         'pubspec.yaml not found. Run this from a Flutter project root or pass '
         '--project-root.',
       );
     }
     final text = pubspec.readAsStringSync();
     if (!RegExp(r'sdk:\s*flutter').hasMatch(text)) {
-      throw InstallException(
+      throw const InstallException(
         'pubspec.yaml does not look like a Flutter project. Expected a '
         'dependency with sdk: flutter.',
       );
@@ -179,7 +180,7 @@ final class HarnessInstaller {
       '--is-inside-work-tree',
     ], workingDirectory: projectRoot);
     if (result.exitCode != 0 || result.stdout.trim() != 'true') {
-      throw InstallException(
+      throw const InstallException(
         'The target project must be a Git repository before adding a submodule.',
       );
     }
@@ -314,7 +315,8 @@ final class HarnessInstaller {
 
 String renderSubmoduleLauncher(String submodulePath) {
   final path = _toPosix(submodulePath);
-  return '''import 'dart:io';
+  return '''
+import 'dart:io';
 
 Future<void> main(List<String> arguments) async {
   final launcher = File.fromUri(Platform.script).absolute;
@@ -380,7 +382,8 @@ Future<void> main(List<String> arguments) async {
   );
   exitCode = await process.exitCode;
 }
-''';
+'''
+      .substring(1);
 }
 
 String renderAgentInstructions(String source, String submodulePath) {
@@ -390,13 +393,15 @@ String renderAgentInstructions(String source, String submodulePath) {
 
 String renderAnalysisOptions(String submodulePath) {
   final path = _toPosix(submodulePath);
-  return '''include:
+  return '''
+include:
   - $path/analysis_options.harness.snippet.yaml
 
 analyzer:
   exclude:
     - $path/**
-''';
+'''
+      .substring(1);
 }
 
 Future<void> _run(

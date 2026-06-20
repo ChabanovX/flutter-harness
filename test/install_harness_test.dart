@@ -11,7 +11,7 @@ void main() {
     expect(launcher, contains('tool'));
     expect(launcher, contains('flutter_agentic_harness'));
     expect(launcher, contains('agent_harness'));
-    expect(launcher, contains("Run git submodule update --init --recursive."));
+    expect(launcher, contains('Run git submodule update --init --recursive.'));
   });
 
   test('rewrites AGENTS documentation paths to the submodule', () {
