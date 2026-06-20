@@ -132,7 +132,8 @@ final class HarnessInstaller {
     _validateFlutterProject(projectRoot);
     await _validateGitProject(projectRoot);
 
-    final repositoryUrl = options.repositoryUrl ?? await _inferRepositoryUrl(harnessRoot);
+    final repositoryUrl =
+        options.repositoryUrl ?? await _inferRepositoryUrl(harnessRoot);
     await _ensureSubmodule(
       projectRoot: projectRoot,
       repositoryUrl: repositoryUrl,
@@ -322,7 +323,8 @@ final class HarnessInstaller {
       '--dev',
       'very_good_analysis:$analyzerVersion',
     ], workingDirectory: projectRoot);
-    if (_usesHarnessAnalysisOptions(projectRoot) && _hasPubspecDependency(projectRoot, 'flutter_lints')) {
+    if (_usesHarnessAnalysisOptions(projectRoot) &&
+        _hasPubspecDependency(projectRoot, 'flutter_lints')) {
       await _run('flutter', const [
         'pub',
         'remove',
@@ -346,7 +348,9 @@ bool isDefaultFlutterAnalysisOptions(String content) {
 }
 
 bool _usesHarnessAnalysisOptions(Directory projectRoot) {
-  final analysisOptions = File(_join(projectRoot.path, 'analysis_options.yaml'));
+  final analysisOptions = File(
+    _join(projectRoot.path, 'analysis_options.yaml'),
+  );
   if (!analysisOptions.existsSync()) return false;
   return analysisOptions.readAsStringSync().contains(
     'analysis_options.harness.snippet.yaml',
@@ -356,7 +360,10 @@ bool _usesHarnessAnalysisOptions(Directory projectRoot) {
 bool _hasPubspecDependency(Directory projectRoot, String dependency) {
   final pubspec = File(_join(projectRoot.path, 'pubspec.yaml'));
   if (!pubspec.existsSync()) return false;
-  return RegExp('^  ${RegExp.escape(dependency)}:', multiLine: true).hasMatch(pubspec.readAsStringSync());
+  return RegExp(
+    '^  ${RegExp.escape(dependency)}:',
+    multiLine: true,
+  ).hasMatch(pubspec.readAsStringSync());
 }
 
 String renderSubmoduleLauncher(String submodulePath) {

@@ -35,18 +35,17 @@ formatter:
   page_width: 120
   trailing_commas: preserve
 ''');
-    final pubGet = await Process.run(
-      Platform.resolvedExecutable,
-      const ['pub', 'get'],
-      workingDirectory: directory.path,
-    );
+    final pubGet = await Process.run(Platform.resolvedExecutable, const [
+      'pub',
+      'get',
+    ], workingDirectory: directory.path);
     expect(pubGet.exitCode, 0, reason: pubGet.stderr.toString());
 
-    final toolDirectory = Directory('${directory.path}/tool')..createSync(recursive: true);
-    final launcher = File('${toolDirectory.path}/harness.dart')
-      ..writeAsStringSync(
-        installer.renderSubmoduleLauncher(installer.defaultSubmodulePath),
-      );
+    final toolDirectory = Directory('${directory.path}/tool')
+      ..createSync(recursive: true);
+    File('${toolDirectory.path}/harness.dart').writeAsStringSync(
+      installer.renderSubmoduleLauncher(installer.defaultSubmodulePath),
+    );
 
     final result = await Process.run(Platform.resolvedExecutable, [
       'format',
