@@ -171,6 +171,10 @@ final class VerifyCommand extends Command<int> {
 
     final executable = isFlutter ? 'flutter' : 'dart';
     final arguments = <String>['test', if (!runAll) ...paths];
+    if (runAll && !hasAnyTestDirectory(context.root)) {
+      context.console.info('No test or integration_test directory found.');
+      return const _StepResult('tests', 0);
+    }
     final code = await context.executor.run(executable, arguments);
     return _StepResult('tests', code);
   }
@@ -179,6 +183,10 @@ final class VerifyCommand extends Command<int> {
     final pubspec = File('${root.path}/pubspec.yaml').readAsStringSync();
     return pubspec.contains(RegExp(r'sdk:\s*flutter'));
   }
+}
+
+bool hasAnyTestDirectory(Directory root) {
+  return Directory('${root.path}/test').existsSync() || Directory('${root.path}/integration_test').existsSync();
 }
 
 final class _StepResult {

@@ -40,16 +40,13 @@ final class DoctorCommand extends Command<int> {
       );
     }
 
-    final harnessPubspec = File(
-      p.join(context.root.path, 'tool', 'agent_harness', 'pubspec.yaml'),
-    );
-    final launcher = File(p.join(context.root.path, 'tool', 'harness.dart'));
-    if (harnessPubspec.existsSync() && launcher.existsSync()) {
-      context.console.success('Isolated harness package and launcher found.');
+    if (hasHarnessInstallation(context.root)) {
+      context.console.success('Harness package and launcher found.');
     } else {
       failures += 1;
       context.console.error(
-        'Copy both tool/harness.dart and tool/agent_harness into the project.',
+        'Install tool/harness.dart with either tool/agent_harness or the '
+        'tool/flutter_agentic_harness submodule.',
       );
     }
 
@@ -153,6 +150,24 @@ final class DoctorCommand extends Command<int> {
       return 1;
     }
   }
+}
+
+bool hasHarnessInstallation(Directory root) {
+  final launcher = File(p.join(root.path, 'tool', 'harness.dart'));
+  final copiedHarnessPubspec = File(
+    p.join(root.path, 'tool', 'agent_harness', 'pubspec.yaml'),
+  );
+  final submoduleHarnessPubspec = File(
+    p.join(
+      root.path,
+      'tool',
+      'flutter_agentic_harness',
+      'tool',
+      'agent_harness',
+      'pubspec.yaml',
+    ),
+  );
+  return launcher.existsSync() && (copiedHarnessPubspec.existsSync() || submoduleHarnessPubspec.existsSync());
 }
 
 extension _FirstOrNull<T> on List<T> {
