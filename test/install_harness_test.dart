@@ -84,4 +84,29 @@ formatter:
     );
     expect(options, contains('tool/flutter_agentic_harness/**'));
   });
+
+  test('detects the default Flutter analyzer options file', () {
+    expect(
+      installer.isDefaultFlutterAnalysisOptions('''
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+'''),
+      isTrue,
+    );
+    expect(
+      installer.isDefaultFlutterAnalysisOptions('''
+include:
+  - tool/flutter_agentic_harness/analysis_options.harness.snippet.yaml
+'''),
+      isFalse,
+    );
+    expect(
+      installer.isDefaultFlutterAnalysisOptions('''
+include: package:very_good_analysis/analysis_options.yaml
+'''),
+      isFalse,
+    );
+  });
 }

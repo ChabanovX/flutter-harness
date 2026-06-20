@@ -261,7 +261,7 @@ final class HarnessInstaller {
         _join(sourceRoot.path, '.agent_harness/baseline.json'),
       ).readAsStringSync(),
     );
-    _writeFile(
+    _writeAnalysisOptions(
       File(_join(projectRoot.path, 'analysis_options.yaml')),
       renderAnalysisOptions(options.submodulePath),
     );
@@ -288,6 +288,27 @@ final class HarnessInstaller {
     stdout.writeln('Wrote ${_relativeToProject(file)}.');
   }
 
+  void _writeAnalysisOptions(File file, String content) {
+    if (file.existsSync()) {
+      final current = file.readAsStringSync();
+      if (current == content) {
+        stdout.writeln('Kept ${_relativeToProject(file)}.');
+        return;
+      }
+      if (!options.force && !isDefaultFlutterAnalysisOptions(current)) {
+        stdout.writeln(
+          'Preserved existing ${_relativeToProject(file)}; pass --force to '
+          'overwrite.',
+        );
+        return;
+      }
+    }
+
+    file.parent.createSync(recursive: true);
+    file.writeAsStringSync(content);
+    stdout.writeln('Wrote ${_relativeToProject(file)}.');
+  }
+
   Future<void> _addApplicationDependencies(Directory projectRoot) async {
     await _run('flutter', const [
       'pub',
@@ -301,6 +322,13 @@ final class HarnessInstaller {
       '--dev',
       'very_good_analysis:$analyzerVersion',
     ], workingDirectory: projectRoot);
+    if (_usesHarnessAnalysisOptions(projectRoot) && _hasPubspecDependency(projectRoot, 'flutter_lints')) {
+      await _run('flutter', const [
+        'pub',
+        'remove',
+        'flutter_lints',
+      ], workingDirectory: projectRoot);
+    }
   }
 
   String _relativeToProject(File file) {
@@ -309,6 +337,26 @@ final class HarnessInstaller {
     if (!path.startsWith('$root/')) return path;
     return path.substring(root.length + 1);
   }
+}
+
+bool isDefaultFlutterAnalysisOptions(String content) {
+  final normalized = content.replaceAll('\r\n', '\n');
+  return normalized.contains('include: package:flutter_lints/flutter.yaml') &&
+      !normalized.contains('analysis_options.harness.snippet.yaml');
+}
+
+bool _usesHarnessAnalysisOptions(Directory projectRoot) {
+  final analysisOptions = File(_join(projectRoot.path, 'analysis_options.yaml'));
+  if (!analysisOptions.existsSync()) return false;
+  return analysisOptions.readAsStringSync().contains(
+    'analysis_options.harness.snippet.yaml',
+  );
+}
+
+bool _hasPubspecDependency(Directory projectRoot, String dependency) {
+  final pubspec = File(_join(projectRoot.path, 'pubspec.yaml'));
+  if (!pubspec.existsSync()) return false;
+  return RegExp('^  ${RegExp.escape(dependency)}:', multiLine: true).hasMatch(pubspec.readAsStringSync());
 }
 
 String renderSubmoduleLauncher(String submodulePath) {
