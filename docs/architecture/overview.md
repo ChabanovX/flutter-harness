@@ -95,6 +95,7 @@ Caching is an opt-in repository policy. Presentation never branches on memory/di
 The harness consists of:
 
 - this concise contract and architecture documentation;
+- commenting conventions for preserving behavioral rationale without noisy narration;
 - analyzer-backed boundary checks;
 - a shrink-only migration baseline;
 - deterministic feature scaffolding;

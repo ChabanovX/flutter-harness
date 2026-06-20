@@ -22,6 +22,12 @@ Cover loading, loaded, empty, failure, retry, and relevant interaction states wi
 
 Keep a small set of high-value user journeys. These are slower and should not duplicate every widget/unit assertion.
 
+## Test comments
+
+Use comments in tests to document behavior contracts and regression risks, not to paraphrase assertions.
+
+Large Cubit, navigation, cache, and integration test files may start with a short scenario matrix. Inline comments should explain async setup, race conditions, platform assumptions, or why a fake/stub is shaped a certain way. Avoid comments like "tap the button" or "expect success" when the code already says that.
+
 ## Verification modes
 
 `verify --changed` selects tests for changed feature paths. Changes to app/core/shared/tooling or dependency files trigger the full suite. Documentation-only changes skip tests.

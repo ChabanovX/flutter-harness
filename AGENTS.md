@@ -34,6 +34,15 @@
 - Guard emissions after asynchronous gaps and cancel subscriptions/timers in `close()`.
 - Avoid Cubit-to-Cubit injection. Prefer repository state, typed update streams, or an explicit presentation coordinator.
 
+## Commenting conventions
+
+- Comment invariants, policies, architecture exceptions, cache/offline behavior, async concurrency, race guards, platform workarounds, and non-obvious fallbacks.
+- Prefer comments that explain why code is shaped this way, what can break, and what contract must be preserved.
+- Use `///` for public contracts and state/API semantics; use `//` for local implementation rationale.
+- Cubit async methods must document their concurrency policy when it is not already obvious from the method name and state shape.
+- Tests may start with a scenario matrix for complex behavior. Inline comments should explain the regression risk or async setup, not repeat the `expect`.
+- Do not comment trivial constructors, field assignments, obvious branches, simple mapping, or UI layout labels unless the file is large enough that section markers improve navigation.
+
 ## Completion contract
 
 1. Add or update tests at the closest useful layer.

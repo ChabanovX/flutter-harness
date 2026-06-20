@@ -25,6 +25,14 @@ Name adjacent behavior that must not change.
 - Analytics/logging:
 - Migration or compatibility concerns:
 
+## Commenting notes
+
+- Invariants or contracts worth documenting:
+- Async/concurrency policy:
+- Cache/offline/fallback behavior:
+- Platform workaround or known backend quirk:
+- Test scenario matrix needed:
+
 ## Tests expected
 
 - Unit:

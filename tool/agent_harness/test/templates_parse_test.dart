@@ -9,10 +9,7 @@ void main() {
     test('all $stateStyle feature templates parse', () {
       final templates = FeatureTemplates(
         packageName: 'demo_app',
-        naming: FeatureNaming(
-          feature: 'notifications',
-          entity: 'notification',
-        ),
+        naming: FeatureNaming(feature: 'notifications', entity: 'notification'),
         stateStyle: stateStyle,
         featurePackageRoot: 'features/notifications',
         sharedDomainPackageRoot: 'shared/domain',
@@ -50,6 +47,22 @@ void main() {
           reason: '${entry.key} failed to parse:\n${result.errors.join('\n')}',
         );
       }
+    });
+
+    test('$stateStyle Cubit template documents its concurrency policy', () {
+      final templates = FeatureTemplates(
+        packageName: 'demo_app',
+        naming: FeatureNaming(feature: 'notifications', entity: 'notification'),
+        stateStyle: stateStyle,
+        featurePackageRoot: 'features/notifications',
+        sharedDomainPackageRoot: 'shared/domain',
+        failureMapperPackagePath: 'core/errors/failure_mapper.dart',
+      );
+
+      expect(
+        templates.cubit,
+        contains('Concurrency policy: ignore overlapping load() calls'),
+      );
     });
   }
 }

@@ -363,6 +363,8 @@ final class ${naming.featurePascal}Cubit extends Cubit<${naming.featurePascal}St
   bool _loading = false;
 
   Future<void> load() async {
+    // Concurrency policy: ignore overlapping load() calls while the current
+    // repository request is in flight.
     if (_loading) return;
     _loading = true;
     emit(const ${naming.featurePascal}Loading());
@@ -481,6 +483,8 @@ final class ${naming.featurePascal}Cubit extends Cubit<${naming.featurePascal}St
   bool _loading = false;
 
   Future<void> load() async {
+    // Concurrency policy: ignore overlapping load() calls while the current
+    // repository request is in flight.
     if (_loading) return;
     _loading = true;
     emit(

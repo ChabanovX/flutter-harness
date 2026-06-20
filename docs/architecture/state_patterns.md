@@ -63,6 +63,22 @@ Every asynchronous Cubit operation must choose one policy:
 
 `isClosed` prevents emissions after disposal but does not prevent stale requests from overwriting newer state. Latest-wins operations need a request token/counter or cancellation.
 
+Document the policy near the guard when the operation is public or easy to misuse:
+
+```dart
+// Concurrency policy: ignore overlapping load() calls while the current
+// repository request is in flight.
+if (_loading) return;
+```
+
+For state models, comment the reason for the shape when it is a deliberate tradeoff:
+
+```dart
+/// Uses one immutable state because search has continuous query, keyboard,
+/// pagination, and result data rather than a small set of discrete phases.
+final class SearchState { ... }
+```
+
 ## Ownership
 
 - Page Cubits are created by route/provider factories.
