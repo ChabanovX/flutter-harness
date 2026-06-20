@@ -344,8 +344,7 @@ Future<void> main(List<String> arguments) async {
   }
 
   final needsPubGet =
-      !packageConfig.existsSync() ||
-      pubspec.lastModifiedSync().isAfter(packageConfig.lastModifiedSync());
+      !packageConfig.existsSync() || pubspec.lastModifiedSync().isAfter(packageConfig.lastModifiedSync());
   if (needsPubGet) {
     stdout.writeln('Preparing local agent harness dependencies...');
     final pubGet = await Process.start(
