@@ -6,4 +6,4 @@ dependencies:
   get_it: any
 
 dev_dependencies:
-  very_good_analysis: ^10.2.0
+  very_good_analysis: 10.2.0
