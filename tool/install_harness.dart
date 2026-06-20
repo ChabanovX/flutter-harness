@@ -315,12 +315,22 @@ final class HarnessInstaller {
       'add',
       'flutter_bloc',
       'get_it',
+      'logger',
+      'intl',
+    ], workingDirectory: projectRoot);
+    await _run('flutter', const [
+      'pub',
+      'add',
+      'flutter_localizations',
+      '--sdk=flutter',
     ], workingDirectory: projectRoot);
     await _run('flutter', const [
       'pub',
       'add',
       '--dev',
       'very_good_analysis:$analyzerVersion',
+      'assetify',
+      'alchemist',
     ], workingDirectory: projectRoot);
     if (_usesHarnessAnalysisOptions(projectRoot) && _hasPubspecDependency(projectRoot, 'flutter_lints')) {
       await _run('flutter', const [

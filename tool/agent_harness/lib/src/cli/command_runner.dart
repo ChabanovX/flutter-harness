@@ -5,7 +5,10 @@ import 'package:args/command_runner.dart';
 
 import 'architecture_command.dart';
 import 'doctor_command.dart';
+import 'generate_command.dart';
+import 'golden_command.dart';
 import 'init_command.dart';
+import 'quality_command.dart';
 import 'scaffold_command.dart';
 import 'verify_command.dart';
 
@@ -22,7 +25,10 @@ final class AgentHarnessCommandRunner extends CommandRunner<int> {
     );
     addCommand(ArchitectureCommand());
     addCommand(DoctorCommand());
+    addCommand(GenerateCommand());
+    addCommand(GoldenCommand());
     addCommand(InitCommand());
+    addCommand(QualityCommand());
     addCommand(ScaffoldCommand());
     addCommand(VerifyCommand());
   }

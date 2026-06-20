@@ -8,6 +8,9 @@ final class FeatureTemplates {
     required this.featurePackageRoot,
     required this.sharedDomainPackageRoot,
     required this.failureMapperPackagePath,
+    required this.designTokensPackagePath,
+    required this.localizationsPackagePath,
+    required this.localizationsClass,
   });
 
   final String packageName;
@@ -16,6 +19,9 @@ final class FeatureTemplates {
   final String featurePackageRoot;
   final String sharedDomainPackageRoot;
   final String failureMapperPackagePath;
+  final String designTokensPackagePath;
+  final String localizationsPackagePath;
+  final String localizationsClass;
 
   String get domainEntity =>
       '''final class ${naming.entityPascal} {
@@ -393,6 +399,8 @@ final class ${naming.featurePascal}Cubit extends Cubit<${naming.featurePascal}St
   String get _sealedPage =>
       '''import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:$packageName/$designTokensPackagePath';
+import 'package:$packageName/$localizationsPackagePath';
 import 'package:$packageName/$featurePackageRoot/presentation/cubit/${naming.featureSnake}_cubit.dart';
 import 'package:$packageName/$featurePackageRoot/presentation/cubit/${naming.featureSnake}_state.dart';
 
@@ -401,29 +409,37 @@ final class ${naming.featurePascal}Page extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = $localizationsClass.of(context);
+    final spacing =
+        Theme.of(context).extension<AppSpacing>() ?? AppSpacing.regular;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('${naming.featurePascal}')),
-      body: BlocBuilder<${naming.featurePascal}Cubit, ${naming.featurePascal}State>(
-        builder: (context, state) => switch (state) {
-          ${naming.featurePascal}Initial() || ${naming.featurePascal}Loading() =>
-            const Center(child: CircularProgressIndicator()),
-          ${naming.featurePascal}Empty() => const Center(
-              child: Text('Nothing here yet.'),
-            ),
-          ${naming.featurePascal}Loaded(items: final items) => ListView.builder(
-              itemCount: items.length,
-              itemBuilder: (context, index) => ListTile(
-                key: ValueKey(items[index].id),
-                title: Text(items[index].title),
+      appBar: AppBar(title: Text(l10n.featurePageTitle('${naming.featurePascal}'))),
+      body: Padding(
+        padding: spacing.page,
+        child: BlocBuilder<${naming.featurePascal}Cubit, ${naming.featurePascal}State>(
+          builder: (context, state) => switch (state) {
+            ${naming.featurePascal}Initial() ||
+            ${naming.featurePascal}Loading() =>
+              const Center(child: CircularProgressIndicator()),
+            ${naming.featurePascal}Empty() => Center(
+                child: Text(l10n.emptyStateMessage),
               ),
-            ),
-          ${naming.featurePascal}Failure() => Center(
-              child: FilledButton(
-                onPressed: context.read<${naming.featurePascal}Cubit>().load,
-                child: const Text('Retry'),
+            ${naming.featurePascal}Loaded(items: final items) => ListView.builder(
+                itemCount: items.length,
+                itemBuilder: (context, index) => ListTile(
+                  key: ValueKey(items[index].id),
+                  title: Text(items[index].title),
+                ),
               ),
-            ),
-        },
+            ${naming.featurePascal}Failure() => Center(
+                child: FilledButton(
+                  onPressed: context.read<${naming.featurePascal}Cubit>().load,
+                  child: Text(l10n.retryAction),
+                ),
+              ),
+          },
+        ),
       ),
     );
   }
@@ -527,6 +543,8 @@ final class ${naming.featurePascal}Cubit extends Cubit<${naming.featurePascal}St
   String get _statusPage =>
       '''import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:$packageName/$designTokensPackagePath';
+import 'package:$packageName/$localizationsPackagePath';
 import 'package:$packageName/$featurePackageRoot/presentation/cubit/${naming.featureSnake}_cubit.dart';
 import 'package:$packageName/$featurePackageRoot/presentation/cubit/${naming.featureSnake}_state.dart';
 
@@ -535,30 +553,37 @@ final class ${naming.featurePascal}Page extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = $localizationsClass.of(context);
+    final spacing =
+        Theme.of(context).extension<AppSpacing>() ?? AppSpacing.regular;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('${naming.featurePascal}')),
-      body: BlocBuilder<${naming.featurePascal}Cubit, ${naming.featurePascal}State>(
-        builder: (context, state) => switch (state.status) {
-          ${naming.featurePascal}Status.initial ||
-          ${naming.featurePascal}Status.loading =>
-            const Center(child: CircularProgressIndicator()),
-          ${naming.featurePascal}Status.empty => const Center(
-              child: Text('Nothing here yet.'),
-            ),
-          ${naming.featurePascal}Status.success => ListView.builder(
-              itemCount: state.items.length,
-              itemBuilder: (context, index) => ListTile(
-                key: ValueKey(state.items[index].id),
-                title: Text(state.items[index].title),
+      appBar: AppBar(title: Text(l10n.featurePageTitle('${naming.featurePascal}'))),
+      body: Padding(
+        padding: spacing.page,
+        child: BlocBuilder<${naming.featurePascal}Cubit, ${naming.featurePascal}State>(
+          builder: (context, state) => switch (state.status) {
+            ${naming.featurePascal}Status.initial ||
+            ${naming.featurePascal}Status.loading =>
+              const Center(child: CircularProgressIndicator()),
+            ${naming.featurePascal}Status.empty => Center(
+                child: Text(l10n.emptyStateMessage),
               ),
-            ),
-          ${naming.featurePascal}Status.failure => Center(
-              child: FilledButton(
-                onPressed: context.read<${naming.featurePascal}Cubit>().load,
-                child: const Text('Retry'),
+            ${naming.featurePascal}Status.success => ListView.builder(
+                itemCount: state.items.length,
+                itemBuilder: (context, index) => ListTile(
+                  key: ValueKey(state.items[index].id),
+                  title: Text(state.items[index].title),
+                ),
               ),
-            ),
-        },
+            ${naming.featurePascal}Status.failure => Center(
+                child: FilledButton(
+                  onPressed: context.read<${naming.featurePascal}Cubit>().load,
+                  child: Text(l10n.retryAction),
+                ),
+              ),
+          },
+        ),
       ),
     );
   }
@@ -653,6 +678,7 @@ final class _SuccessRepository implements ${naming.featurePascal}Repository {
       '''import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:$packageName/$localizationsPackagePath';
 import 'package:$packageName/$featurePackageRoot/application/ports/${naming.featureSnake}_repository.dart';
 import 'package:$packageName/$featurePackageRoot/application/queries/get_${naming.featureSnake}.dart';
 import 'package:$packageName/$featurePackageRoot/domain/entities/${naming.entitySnake}.dart';
@@ -671,6 +697,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: $localizationsClass.localizationsDelegates,
+        supportedLocales: $localizationsClass.supportedLocales,
         home: BlocProvider.value(
           value: cubit,
           child: const ${naming.featurePascal}Page(),

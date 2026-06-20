@@ -46,6 +46,13 @@ final class FeatureScaffolder {
       failureMapperPackagePath: config.project.packagePath(
         p.posix.join(config.project.coreRoot, 'errors/failure_mapper.dart'),
       ),
+      designTokensPackagePath: config.project.packagePath(
+        config.quality.designTokensPath,
+      ),
+      localizationsPackagePath: config.project.packagePath(
+        p.posix.join(config.project.coreRoot, 'l10n/app_localizations.dart'),
+      ),
+      localizationsClass: config.quality.localizationsClass,
     );
     final testBase = p.posix.join('test/features', naming.featureSnake);
 

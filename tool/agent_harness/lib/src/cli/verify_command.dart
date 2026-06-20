@@ -4,8 +4,11 @@ import 'package:args/command_runner.dart';
 
 import '../architecture/architecture_checker.dart';
 import '../process/git_changes.dart';
+import '../quality/quality_checker.dart';
 import 'architecture_command.dart';
 import 'command_context.dart';
+import 'golden_command.dart';
+import 'quality_command.dart';
 
 final class VerifyCommand extends Command<int> {
   VerifyCommand() {
@@ -40,6 +43,16 @@ final class VerifyCommand extends Command<int> {
         help: 'Skip unit and widget tests.',
       )
       ..addFlag(
+        'skip-quality',
+        negatable: false,
+        help: 'Skip strict UI quality contracts.',
+      )
+      ..addFlag(
+        'skip-goldens',
+        negatable: false,
+        help: 'Skip golden visual regression tests.',
+      )
+      ..addFlag(
         'skip-extra',
         negatable: false,
         help: 'Skip configured extra commands.',
@@ -64,6 +77,8 @@ final class VerifyCommand extends Command<int> {
     final skipFormat = argResults?['skip-format'] as bool? ?? false;
     final skipAnalyze = argResults?['skip-analyze'] as bool? ?? false;
     final skipTests = argResults?['skip-tests'] as bool? ?? false;
+    final skipQuality = argResults?['skip-quality'] as bool? ?? false;
+    final skipGoldens = argResults?['skip-goldens'] as bool? ?? false;
     final skipExtra = argResults?['skip-extra'] as bool? ?? false;
 
     context.console.heading(
@@ -108,6 +123,17 @@ final class VerifyCommand extends Command<int> {
         (context.config.architecture.failOnStaleBaseline && architectureReport.staleBaselineFingerprints.isNotEmpty);
     results.add(_StepResult('architecture', architectureFailed ? 1 : 0));
 
+    if (!skipQuality) {
+      final qualityReport = QualityChecker(context.config).check();
+      printQualityReport(qualityReport, context: context);
+      results.add(
+        _StepResult(
+          'quality',
+          qualityReport.violations.isEmpty ? 0 : 1,
+        ),
+      );
+    }
+
     if (!skipTests && context.config.verification.tests) {
       final testResult = await _runTests(
         context: context,
@@ -116,6 +142,15 @@ final class VerifyCommand extends Command<int> {
         base: argResults?['base'] as String? ?? context.config.verification.changedBase,
       );
       results.add(testResult);
+    }
+
+    if (!skipGoldens) {
+      final goldenResult = await _runGoldens(
+        context: context,
+        runAll: all,
+        base: argResults?['base'] as String? ?? context.config.verification.changedBase,
+      );
+      results.add(goldenResult);
     }
 
     if (!skipExtra) {
@@ -142,6 +177,33 @@ final class VerifyCommand extends Command<int> {
     }
     context.console.error('${failed.length} verification step(s) failed.');
     return 1;
+  }
+
+  Future<_StepResult> _runGoldens({
+    required CommandContext context,
+    required bool runAll,
+    required String base,
+  }) async {
+    if (!context.config.golden.enabled) {
+      context.console.info('Golden tests are disabled by configuration.');
+      return const _StepResult('goldens', 0);
+    }
+
+    if (!runAll) {
+      final changes = await GitChanges.collect(
+        executor: context.executor,
+        base: base,
+      );
+      final selection = GoldenSelection.fromChanges(
+        config: context.config,
+        changes: changes,
+      );
+      context.console.info('Golden selection: ${selection.reason}');
+      if (!selection.run) return const _StepResult('goldens', 0);
+    }
+
+    final code = await runGoldenTests(context: context, update: false);
+    return _StepResult('goldens', code);
   }
 
   Future<_StepResult> _runTests({

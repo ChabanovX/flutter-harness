@@ -3,7 +3,13 @@
 
 dependencies:
   flutter_bloc: any
+  flutter_localizations:
+    sdk: flutter
   get_it: any
+  intl: any
+  logger: any
 
 dev_dependencies:
+  alchemist: any
+  assetify: any
   very_good_analysis: 10.2.0

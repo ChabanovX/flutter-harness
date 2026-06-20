@@ -12,6 +12,8 @@ final class HarnessConfig {
     required this.packageName,
     required this.project,
     required this.architecture,
+    required this.quality,
+    required this.golden,
     required this.verification,
     required this.scaffolding,
   });
@@ -20,6 +22,8 @@ final class HarnessConfig {
   final String packageName;
   final ProjectConfig project;
   final ArchitectureConfig architecture;
+  final QualityConfig quality;
+  final GoldenConfig golden;
   final VerificationConfig verification;
   final ScaffoldingConfig scaffolding;
 
@@ -34,6 +38,8 @@ final class HarnessConfig {
 
     final projectMap = _asMap(map['project']);
     final architectureMap = _asMap(map['architecture']);
+    final qualityMap = _asMap(map['quality']);
+    final goldenMap = _asMap(map['golden']);
     final verificationMap = _asMap(map['verification']);
     final scaffoldingMap = _asMap(map['scaffolding']);
 
@@ -149,6 +155,51 @@ final class HarnessConfig {
           fallback: true,
         ),
         exceptions: _exceptions(architectureMap['exceptions']),
+      ),
+      quality: QualityConfig(
+        enforceDesignTokens: _boolean(
+          qualityMap['enforce_design_tokens'],
+          fallback: true,
+        ),
+        enforceLocalization: _boolean(
+          qualityMap['enforce_localization'],
+          fallback: true,
+        ),
+        enforceAssets: _boolean(
+          qualityMap['enforce_assets'],
+          fallback: true,
+        ),
+        enforceLogging: _boolean(
+          qualityMap['enforce_logging'],
+          fallback: true,
+        ),
+        designTokensPath: _normalizedPath(
+          _string(
+            qualityMap['design_tokens_path'],
+            fallback: p.posix.join(
+              project.coreRoot,
+              'design_system/tokens/tokens.dart',
+            ),
+          ),
+        ),
+        localizationsClass: _string(
+          qualityMap['localizations_class'],
+          fallback: 'AppLocalizations',
+        ),
+        assetsClass: _string(
+          qualityMap['assets_class'],
+          fallback: 'Assets',
+        ),
+        loggingFacadeClass: _string(
+          qualityMap['logging_facade_class'],
+          fallback: 'AppLogger',
+        ),
+      ),
+      golden: GoldenConfig(
+        enabled: _boolean(goldenMap['enabled'], fallback: true),
+        testPath: _normalizedPath(
+          _string(goldenMap['test_path'], fallback: 'test/golden'),
+        ),
       ),
       verification: VerificationConfig(
         formatPaths: _normalizedPathList(
@@ -317,6 +368,38 @@ final class ArchitectureException {
     if (targetGlob == null) return true;
     return candidateTarget != null && targetGlob.matches(toPosixPath(candidateTarget));
   }
+}
+
+final class QualityConfig {
+  const QualityConfig({
+    required this.enforceDesignTokens,
+    required this.enforceLocalization,
+    required this.enforceAssets,
+    required this.enforceLogging,
+    required this.designTokensPath,
+    required this.localizationsClass,
+    required this.assetsClass,
+    required this.loggingFacadeClass,
+  });
+
+  final bool enforceDesignTokens;
+  final bool enforceLocalization;
+  final bool enforceAssets;
+  final bool enforceLogging;
+  final String designTokensPath;
+  final String localizationsClass;
+  final String assetsClass;
+  final String loggingFacadeClass;
+}
+
+final class GoldenConfig {
+  const GoldenConfig({
+    required this.enabled,
+    required this.testPath,
+  });
+
+  final bool enabled;
+  final String testPath;
 }
 
 final class VerificationConfig {

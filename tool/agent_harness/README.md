@@ -9,3 +9,12 @@ dart pub get
 dart analyze
 dart test
 ```
+
+Application-facing commands exposed by this package include:
+
+```bash
+dart run tool/harness.dart quality
+dart run tool/harness.dart generate
+dart run tool/harness.dart golden
+dart run tool/harness.dart verify --changed
+```

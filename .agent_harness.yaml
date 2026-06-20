@@ -81,6 +81,20 @@ architecture:
   #   target: lib/features/catalog/domain/**
   #   reason: Temporary migration bridge; tracked by ADR-0012.
 
+quality:
+  enforce_design_tokens: true
+  enforce_localization: true
+  enforce_assets: true
+  enforce_logging: true
+  design_tokens_path: lib/core/design_system/tokens/tokens.dart
+  localizations_class: AppLocalizations
+  assets_class: Assets
+  logging_facade_class: AppLogger
+
+golden:
+  enabled: true
+  test_path: test/golden
+
 verification:
   format_paths:
     - lib

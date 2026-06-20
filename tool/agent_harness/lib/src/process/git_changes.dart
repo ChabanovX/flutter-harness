@@ -208,3 +208,77 @@ final class TestSelection {
     );
   }
 }
+
+final class GoldenSelection {
+  const GoldenSelection({
+    required this.run,
+    required this.reason,
+  });
+
+  final bool run;
+  final String reason;
+
+  static GoldenSelection fromChanges({
+    required HarnessConfig config,
+    required GitChanges changes,
+  }) {
+    if (!config.golden.enabled) {
+      return const GoldenSelection(
+        run: false,
+        reason: 'Golden tests are disabled by configuration.',
+      );
+    }
+
+    if (!changes.available) {
+      return GoldenSelection(
+        run: config.verification.fallbackToAllTests,
+        reason: 'Git metadata is unavailable.',
+      );
+    }
+
+    if (changes.files.isEmpty) {
+      return const GoldenSelection(
+        run: false,
+        reason: 'No changed files detected.',
+      );
+    }
+
+    final nonDocumentation = changes.files.where((path) => !isDocumentationPath(path));
+    for (final changed in nonDocumentation) {
+      final path = toPosixPath(changed);
+      if (_isGoldenImpactingPath(config, path)) {
+        return GoldenSelection(
+          run: true,
+          reason: 'A UI, design, asset, or golden path changed: $path.',
+        );
+      }
+    }
+
+    return const GoldenSelection(
+      run: false,
+      reason: 'No UI, design, asset, or golden paths changed.',
+    );
+  }
+
+  static bool _isGoldenImpactingPath(HarnessConfig config, String path) {
+    if (path == 'pubspec.yaml' || path == 'pubspec.lock') return true;
+    if (path == '.agent_harness.yaml') return true;
+    if (path == config.quality.designTokensPath) return true;
+    if (path.startsWith('${config.project.coreRoot}/design_system/')) {
+      return true;
+    }
+    if (path.startsWith('assets/')) return true;
+    if (path.startsWith('${config.golden.testPath}/')) return true;
+    if (path.endsWith('_golden_test.dart')) return true;
+    if (path.startsWith('${config.project.appRoot}/')) return true;
+    if (path.startsWith('${config.project.sharedRoot}/presentation/')) {
+      return true;
+    }
+
+    final featureRoot = toPosixPath(config.project.featureRoot);
+    if (!path.startsWith('$featureRoot/')) return false;
+    final remainder = p.posix.relative(path, from: featureRoot);
+    final segments = p.posix.split(remainder);
+    return segments.length >= 2 && segments[1] == 'presentation';
+  }
+}

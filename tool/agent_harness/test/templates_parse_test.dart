@@ -14,6 +14,9 @@ void main() {
         featurePackageRoot: 'features/notifications',
         sharedDomainPackageRoot: 'shared/domain',
         failureMapperPackagePath: 'core/errors/failure_mapper.dart',
+        designTokensPackagePath: 'core/design_system/tokens/tokens.dart',
+        localizationsPackagePath: 'core/l10n/app_localizations.dart',
+        localizationsClass: 'AppLocalizations',
       );
       final sources = <String, String>{
         'domain entity': templates.domainEntity,
@@ -57,12 +60,36 @@ void main() {
         featurePackageRoot: 'features/notifications',
         sharedDomainPackageRoot: 'shared/domain',
         failureMapperPackagePath: 'core/errors/failure_mapper.dart',
+        designTokensPackagePath: 'core/design_system/tokens/tokens.dart',
+        localizationsPackagePath: 'core/l10n/app_localizations.dart',
+        localizationsClass: 'AppLocalizations',
       );
 
       expect(
         templates.cubit,
         contains('Concurrency policy: ignore overlapping load() calls'),
       );
+    });
+
+    test('$stateStyle page template uses l10n and design tokens', () {
+      final templates = FeatureTemplates(
+        packageName: 'demo_app',
+        naming: FeatureNaming(feature: 'notifications', entity: 'notification'),
+        stateStyle: stateStyle,
+        featurePackageRoot: 'features/notifications',
+        sharedDomainPackageRoot: 'shared/domain',
+        failureMapperPackagePath: 'core/errors/failure_mapper.dart',
+        designTokensPackagePath: 'core/design_system/tokens/tokens.dart',
+        localizationsPackagePath: 'core/l10n/app_localizations.dart',
+        localizationsClass: 'AppLocalizations',
+      );
+
+      expect(templates.page, contains('AppLocalizations.of(context)'));
+      expect(templates.page, contains('AppSpacing'));
+      expect(templates.page, contains('l10n.emptyStateMessage'));
+      expect(templates.page, contains('l10n.retryAction'));
+      expect(templates.page, isNot(contains("Text('Nothing here yet.')")));
+      expect(templates.page, isNot(contains("Text('Retry')")));
     });
   }
 }

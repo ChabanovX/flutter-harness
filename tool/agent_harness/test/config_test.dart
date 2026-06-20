@@ -20,6 +20,19 @@ void main() {
       config.architecture.presentationForbiddenInternalRoots,
       contains('lib/core/network'),
     );
+    expect(config.quality.enforceDesignTokens, isTrue);
+    expect(config.quality.enforceLocalization, isTrue);
+    expect(config.quality.enforceAssets, isTrue);
+    expect(config.quality.enforceLogging, isTrue);
+    expect(
+      config.quality.designTokensPath,
+      'lib/core/design_system/tokens/tokens.dart',
+    );
+    expect(config.quality.localizationsClass, 'AppLocalizations');
+    expect(config.quality.assetsClass, 'Assets');
+    expect(config.quality.loggingFacadeClass, 'AppLogger');
+    expect(config.golden.enabled, isTrue);
+    expect(config.golden.testPath, 'test/golden');
   });
 
   test('supports custom roots consistently', () {
@@ -48,6 +61,38 @@ architecture:
       config.architecture.presentationForbiddenInternalRoots,
       ['lib/src/platform/http'],
     );
+  });
+
+  test('supports quality and golden overrides', () {
+    final project = TestProject.create(
+      config: '''quality:
+  enforce_design_tokens: false
+  enforce_localization: false
+  enforce_assets: false
+  enforce_logging: false
+  design_tokens_path: lib/ui/tokens.dart
+  localizations_class: RivaLocalizations
+  assets_class: RivaAssets
+  logging_facade_class: RivaLogger
+golden:
+  enabled: false
+  test_path: test/visual
+''',
+    );
+    addTearDown(project.dispose);
+
+    final config = HarnessConfig.load(project.root);
+
+    expect(config.quality.enforceDesignTokens, isFalse);
+    expect(config.quality.enforceLocalization, isFalse);
+    expect(config.quality.enforceAssets, isFalse);
+    expect(config.quality.enforceLogging, isFalse);
+    expect(config.quality.designTokensPath, 'lib/ui/tokens.dart');
+    expect(config.quality.localizationsClass, 'RivaLocalizations');
+    expect(config.quality.assetsClass, 'RivaAssets');
+    expect(config.quality.loggingFacadeClass, 'RivaLogger');
+    expect(config.golden.enabled, isFalse);
+    expect(config.golden.testPath, 'test/visual');
   });
 
   test('rejects overlapping architecture roots', () {
