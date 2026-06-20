@@ -1,0 +1,11 @@
+name: flutter_agentic_harness
+description: Drop-in architecture and tooling harness for Flutter projects.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+dev_dependencies:
+  test: ">=1.25.0 <2.0.0"
+  very_good_analysis: 10.2.0

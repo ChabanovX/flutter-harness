@@ -72,6 +72,13 @@ The scaffolder creates domain, application, data, presentation, DI-registration,
 
 ## Harness self-checks
 
+The repository root is a lightweight Dart package for analyzer configuration and repository-level commands:
+
+```bash
+dart pub get
+dart analyze
+```
+
 The nested package has its own tests so tool changes can be validated independently:
 
 ```bash

@@ -23,7 +23,8 @@ Future<void> main(List<String> arguments) async {
     return;
   }
 
-  final needsPubGet = !packageConfig.existsSync() ||
+  final needsPubGet =
+      !packageConfig.existsSync() ||
       pubspec.lastModifiedSync().isAfter(packageConfig.lastModifiedSync());
   if (needsPubGet) {
     stdout.writeln('Preparing local agent harness dependencies...');
