@@ -1,0 +1,6 @@
+# Merge into the application's root analysis_options.yaml.
+# The nested harness package is analyzed separately in its own package context.
+
+analyzer:
+  exclude:
+    - tool/agent_harness/**

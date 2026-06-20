@@ -1,0 +1,6 @@
+# Merge only the dependencies used by generated application code.
+# The harness itself is isolated under tool/agent_harness and is not an app dependency.
+
+dependencies:
+  flutter_bloc: any
+  get_it: any
