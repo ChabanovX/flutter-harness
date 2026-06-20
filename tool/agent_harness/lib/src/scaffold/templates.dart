@@ -17,7 +17,8 @@ final class FeatureTemplates {
   final String sharedDomainPackageRoot;
   final String failureMapperPackagePath;
 
-  String get domainEntity => '''final class ${naming.entityPascal} {
+  String get domainEntity =>
+      '''final class ${naming.entityPascal} {
   const ${naming.entityPascal}({
     required this.id,
     required this.title,
@@ -39,7 +40,8 @@ final class FeatureTemplates {
 }
 ''';
 
-  String get repositoryPort => '''import 'package:$packageName/$featurePackageRoot/domain/entities/${naming.entitySnake}.dart';
+  String get repositoryPort =>
+      '''import 'package:$packageName/$featurePackageRoot/domain/entities/${naming.entitySnake}.dart';
 import 'package:$packageName/$sharedDomainPackageRoot/app_result.dart';
 
 abstract interface class ${naming.featurePascal}Repository {
@@ -47,7 +49,8 @@ abstract interface class ${naming.featurePascal}Repository {
 }
 ''';
 
-  String get query => '''import 'package:$packageName/$featurePackageRoot/application/ports/${naming.featureSnake}_repository.dart';
+  String get query =>
+      '''import 'package:$packageName/$featurePackageRoot/application/ports/${naming.featureSnake}_repository.dart';
 import 'package:$packageName/$featurePackageRoot/domain/entities/${naming.entitySnake}.dart';
 import 'package:$packageName/$sharedDomainPackageRoot/app_result.dart';
 
@@ -61,7 +64,8 @@ final class Get${naming.featurePascal} {
 }
 ''';
 
-  String get dto => '''final class ${naming.entityPascal}Dto {
+  String get dto =>
+      '''final class ${naming.entityPascal}Dto {
   const ${naming.entityPascal}Dto({
     required this.id,
     required this.title,
@@ -83,7 +87,8 @@ final class Get${naming.featurePascal} {
 }
 ''';
 
-  String get mapper => '''import 'package:$packageName/$featurePackageRoot/data/dto/${naming.entitySnake}_dto.dart';
+  String get mapper =>
+      '''import 'package:$packageName/$featurePackageRoot/data/dto/${naming.entitySnake}_dto.dart';
 import 'package:$packageName/$featurePackageRoot/domain/entities/${naming.entitySnake}.dart';
 
 abstract final class ${naming.entityPascal}Mapper {
@@ -93,14 +98,16 @@ abstract final class ${naming.entityPascal}Mapper {
 }
 ''';
 
-  String get dataSource => '''import 'package:$packageName/$featurePackageRoot/data/dto/${naming.entitySnake}_dto.dart';
+  String get dataSource =>
+      '''import 'package:$packageName/$featurePackageRoot/data/dto/${naming.entitySnake}_dto.dart';
 
 abstract interface class ${naming.featurePascal}RemoteDataSource {
   Future<List<${naming.entityPascal}Dto>> fetch${naming.featurePascal}();
 }
 ''';
 
-  String get repositoryImplementation => '''import 'package:$packageName/$failureMapperPackagePath';
+  String get repositoryImplementation =>
+      '''import 'package:$packageName/$failureMapperPackagePath';
 import 'package:$packageName/$featurePackageRoot/application/ports/${naming.featureSnake}_repository.dart';
 import 'package:$packageName/$featurePackageRoot/data/datasources/${naming.featureSnake}_remote_data_source.dart';
 import 'package:$packageName/$featurePackageRoot/data/mappers/${naming.entitySnake}_mapper.dart';
@@ -140,7 +147,8 @@ final class ${naming.featurePascal}RepositoryImpl
 
   String get page => stateStyle == 'status' ? _statusPage : _sealedPage;
 
-  String get diModule => '''import 'package:get_it/get_it.dart';
+  String get diModule =>
+      '''import 'package:get_it/get_it.dart';
 import 'package:$packageName/$failureMapperPackagePath';
 import 'package:$packageName/$featurePackageRoot/application/ports/${naming.featureSnake}_repository.dart';
 import 'package:$packageName/$featurePackageRoot/application/queries/get_${naming.featureSnake}.dart';
@@ -184,7 +192,8 @@ void register${naming.featurePascal}Module(GetIt getIt) {
 }
 ''';
 
-  String get mapperTest => '''import 'package:flutter_test/flutter_test.dart';
+  String get mapperTest =>
+      '''import 'package:flutter_test/flutter_test.dart';
 import 'package:$packageName/$featurePackageRoot/data/dto/${naming.entitySnake}_dto.dart';
 import 'package:$packageName/$featurePackageRoot/data/mappers/${naming.entitySnake}_mapper.dart';
 
@@ -203,7 +212,8 @@ void main() {
 }
 ''';
 
-  String get queryTest => '''import 'package:flutter_test/flutter_test.dart';
+  String get queryTest =>
+      '''import 'package:flutter_test/flutter_test.dart';
 import 'package:$packageName/$featurePackageRoot/application/ports/${naming.featureSnake}_repository.dart';
 import 'package:$packageName/$featurePackageRoot/application/queries/get_${naming.featureSnake}.dart';
 import 'package:$packageName/$featurePackageRoot/domain/entities/${naming.entitySnake}.dart';
@@ -235,7 +245,8 @@ final class _Fake${naming.featurePascal}Repository
 }
 ''';
 
-  String get repositoryTest => '''import 'package:flutter_test/flutter_test.dart';
+  String get repositoryTest =>
+      '''import 'package:flutter_test/flutter_test.dart';
 import 'package:$packageName/$failureMapperPackagePath';
 import 'package:$packageName/$featurePackageRoot/data/datasources/${naming.featureSnake}_remote_data_source.dart';
 import 'package:$packageName/$featurePackageRoot/data/dto/${naming.entitySnake}_dto.dart';
@@ -299,15 +310,12 @@ final class _NetworkFailureMapper implements FailureMapper {
 }
 ''';
 
-  String get cubitTest => stateStyle == 'status'
-      ? _statusCubitTest
-      : _sealedCubitTest;
+  String get cubitTest => stateStyle == 'status' ? _statusCubitTest : _sealedCubitTest;
 
-  String get widgetTest => stateStyle == 'status'
-      ? _statusWidgetTest
-      : _sealedWidgetTest;
+  String get widgetTest => stateStyle == 'status' ? _statusWidgetTest : _sealedWidgetTest;
 
-  String get _sealedState => '''import 'package:$packageName/$featurePackageRoot/domain/entities/${naming.entitySnake}.dart';
+  String get _sealedState =>
+      '''import 'package:$packageName/$featurePackageRoot/domain/entities/${naming.entitySnake}.dart';
 import 'package:$packageName/$sharedDomainPackageRoot/app_failure.dart';
 
 sealed class ${naming.featurePascal}State {
@@ -339,7 +347,8 @@ final class ${naming.featurePascal}Failure extends ${naming.featurePascal}State 
 }
 ''';
 
-  String get _sealedCubit => '''import 'package:flutter_bloc/flutter_bloc.dart';
+  String get _sealedCubit =>
+      '''import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:$packageName/$featurePackageRoot/application/queries/get_${naming.featureSnake}.dart';
 import 'package:$packageName/$featurePackageRoot/presentation/cubit/${naming.featureSnake}_state.dart';
 import 'package:$packageName/$sharedDomainPackageRoot/app_result.dart';
@@ -379,7 +388,8 @@ final class ${naming.featurePascal}Cubit extends Cubit<${naming.featurePascal}St
 }
 ''';
 
-  String get _sealedPage => '''import 'package:flutter/material.dart';
+  String get _sealedPage =>
+      '''import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:$packageName/$featurePackageRoot/presentation/cubit/${naming.featureSnake}_cubit.dart';
 import 'package:$packageName/$featurePackageRoot/presentation/cubit/${naming.featureSnake}_state.dart';
@@ -418,7 +428,8 @@ final class ${naming.featurePascal}Page extends StatelessWidget {
 }
 ''';
 
-  String get _statusState => '''import 'package:$packageName/$featurePackageRoot/domain/entities/${naming.entitySnake}.dart';
+  String get _statusState =>
+      '''import 'package:$packageName/$featurePackageRoot/domain/entities/${naming.entitySnake}.dart';
 import 'package:$packageName/$sharedDomainPackageRoot/app_failure.dart';
 
 enum ${naming.featurePascal}Status {
@@ -454,7 +465,8 @@ final class ${naming.featurePascal}State {
 }
 ''';
 
-  String get _statusCubit => '''import 'package:flutter_bloc/flutter_bloc.dart';
+  String get _statusCubit =>
+      '''import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:$packageName/$featurePackageRoot/application/queries/get_${naming.featureSnake}.dart';
 import 'package:$packageName/$featurePackageRoot/presentation/cubit/${naming.featureSnake}_state.dart';
 import 'package:$packageName/$sharedDomainPackageRoot/app_result.dart';
@@ -508,7 +520,8 @@ final class ${naming.featurePascal}Cubit extends Cubit<${naming.featurePascal}St
 }
 ''';
 
-  String get _statusPage => '''import 'package:flutter/material.dart';
+  String get _statusPage =>
+      '''import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:$packageName/$featurePackageRoot/presentation/cubit/${naming.featureSnake}_cubit.dart';
 import 'package:$packageName/$featurePackageRoot/presentation/cubit/${naming.featureSnake}_state.dart';
@@ -548,7 +561,8 @@ final class ${naming.featurePascal}Page extends StatelessWidget {
 }
 ''';
 
-  String get _sealedCubitTest => '''import 'package:flutter_test/flutter_test.dart';
+  String get _sealedCubitTest =>
+      '''import 'package:flutter_test/flutter_test.dart';
 import 'package:$packageName/$featurePackageRoot/application/ports/${naming.featureSnake}_repository.dart';
 import 'package:$packageName/$featurePackageRoot/application/queries/get_${naming.featureSnake}.dart';
 import 'package:$packageName/$featurePackageRoot/domain/entities/${naming.entitySnake}.dart';
@@ -589,7 +603,8 @@ final class _SuccessRepository implements ${naming.featurePascal}Repository {
 }
 ''';
 
-  String get _statusCubitTest => '''import 'package:flutter_test/flutter_test.dart';
+  String get _statusCubitTest =>
+      '''import 'package:flutter_test/flutter_test.dart';
 import 'package:$packageName/$featurePackageRoot/application/ports/${naming.featureSnake}_repository.dart';
 import 'package:$packageName/$featurePackageRoot/application/queries/get_${naming.featureSnake}.dart';
 import 'package:$packageName/$featurePackageRoot/domain/entities/${naming.entitySnake}.dart';
@@ -630,7 +645,8 @@ final class _SuccessRepository implements ${naming.featurePascal}Repository {
 }
 ''';
 
-  String get _sealedWidgetTest => '''import 'package:flutter/material.dart';
+  String get _sealedWidgetTest =>
+      '''import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:$packageName/$featurePackageRoot/application/ports/${naming.featureSnake}_repository.dart';

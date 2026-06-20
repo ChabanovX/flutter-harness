@@ -74,8 +74,7 @@ final class ScaffoldFeatureCommand extends Command<int> {
       feature: rest.single,
       entity: argResults?['entity'] as String?,
     );
-    final stateStyle = argResults?['state'] as String? ??
-        context.config.scaffolding.defaultStateStyle;
+    final stateStyle = argResults?['state'] as String? ?? context.config.scaffolding.defaultStateStyle;
     final force = argResults?['force'] as bool? ?? false;
     final dryRun = argResults?['dry-run'] as bool? ?? false;
     final getItOverride = argResults?['get-it-module'] as bool?;
@@ -86,10 +85,8 @@ final class ScaffoldFeatureCommand extends Command<int> {
       stateStyle: stateStyle,
       force: force,
       dryRun: dryRun,
-      generateGetItModule: getItOverride ??
-          context.config.scaffolding.generateGetItModule,
-      generateWidgetTest: widgetTestOverride ??
-          context.config.scaffolding.generateWidgetTest,
+      generateGetItModule: getItOverride ?? context.config.scaffolding.generateGetItModule,
+      generateWidgetTest: widgetTestOverride ?? context.config.scaffolding.generateWidgetTest,
     );
 
     context.console.heading(

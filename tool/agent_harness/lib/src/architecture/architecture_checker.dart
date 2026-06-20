@@ -15,14 +15,14 @@ import 'violation.dart';
 
 final class ArchitectureChecker {
   ArchitectureChecker(this.config)
-      : _layout = ProjectLayout(config),
-        _resolver = ImportResolver(
-          packageName: config.packageName,
-          libRoot: config.project.libRoot,
-        ),
-        _excludedGlobs = config.architecture.excludedPaths
-            .map((pattern) => Glob(pattern, context: p.posix))
-            .toList(growable: false);
+    : _layout = ProjectLayout(config),
+      _resolver = ImportResolver(
+        packageName: config.packageName,
+        libRoot: config.project.libRoot,
+      ),
+      _excludedGlobs = config.architecture.excludedPaths
+          .map((pattern) => Glob(pattern, context: p.posix))
+          .toList(growable: false);
 
   final HarnessConfig config;
   final ProjectLayout _layout;
@@ -58,10 +58,7 @@ final class ArchitectureChecker {
       }
     }
 
-    final stale = baseline.fingerprints
-        .difference(currentFingerprints)
-        .toList(growable: false)
-      ..sort();
+    final stale = baseline.fingerprints.difference(currentFingerprints).toList(growable: false)..sort();
 
     return ArchitectureReport(
       violations: List.unmodifiable(violations),
@@ -79,15 +76,15 @@ final class ArchitectureChecker {
     final source = _layout.classify(relativePath);
     final content = file.readAsStringSync();
 
-    if (source.isUnderFeatureRoot &&
-        source.zone == ArchitectureZone.unclassified) {
+    if (source.isUnderFeatureRoot && source.zone == ArchitectureZone.unclassified) {
       _add(
         violations,
         ArchitectureViolation(
           rule: 'unknown_feature_layer',
           path: relativePath,
           line: 1,
-          message: 'Feature files must live under domain, application, data, '
+          message:
+              'Feature files must live under domain, application, data, '
               'or presentation.',
           anchor: source.feature ?? relativePath,
         ),
@@ -127,9 +124,7 @@ final class ArchitectureChecker {
           _checkUri(
             source: source,
             uri: configuration.uri.stringValue,
-            line: result.lineInfo
-                .getLocation(configuration.offset)
-                .lineNumber,
+            line: result.lineInfo.getLocation(configuration.offset).lineNumber,
             violations: violations,
           );
         }
@@ -144,9 +139,7 @@ final class ArchitectureChecker {
           _checkUri(
             source: source,
             uri: configuration.uri.stringValue,
-            line: result.lineInfo
-                .getLocation(configuration.offset)
-                .lineNumber,
+            line: result.lineInfo.getLocation(configuration.offset).lineNumber,
             violations: violations,
           );
         }
@@ -171,12 +164,10 @@ final class ArchitectureChecker {
       _SourcePatternVisitor(
         relativePath: relativePath,
         source: source,
-        lineForOffset: (offset) =>
-            result.lineInfo.getLocation(offset).lineNumber,
+        lineForOffset: (offset) => result.lineInfo.getLocation(offset).lineNumber,
         forbidPrint: config.architecture.forbidPrint,
         enforceDtoLocation: config.architecture.enforceDtoLocation,
-        serviceLocatorIdentifiers:
-            config.architecture.serviceLocatorIdentifiers.toSet(),
+        serviceLocatorIdentifiers: config.architecture.serviceLocatorIdentifiers.toSet(),
         addViolation: (violation) => _add(violations, violation),
       ),
     );
@@ -257,12 +248,11 @@ final class ArchitectureChecker {
     required int line,
     required List<ArchitectureViolation> violations,
   }) {
-    final isPureLayer = source.zone == ArchitectureZone.featureDomain ||
+    final isPureLayer =
+        source.zone == ArchitectureZone.featureDomain ||
         source.zone == ArchitectureZone.sharedDomain ||
         source.zone == ArchitectureZone.featureApplication;
-    if (!isPureLayer ||
-        !config.architecture.pureLayerForbiddenDartLibraries
-            .contains(target.uri)) {
+    if (!isPureLayer || !config.architecture.pureLayerForbiddenDartLibraries.contains(target.uri)) {
       return;
     }
 
@@ -295,7 +285,8 @@ final class ArchitectureChecker {
           path: source.path,
           line: line,
           target: target.uri,
-          message: 'part/part of URIs must reference a file in the same '
+          message:
+              'part/part of URIs must reference a file in the same '
               'architecture layer.',
           anchor: target.uri,
         ),
@@ -304,8 +295,7 @@ final class ArchitectureChecker {
     }
 
     final destination = _layout.classify(target.path);
-    if (destination.zone == source.zone &&
-        destination.feature == source.feature) {
+    if (destination.zone == source.zone && destination.feature == source.feature) {
       return;
     }
 
@@ -316,7 +306,8 @@ final class ArchitectureChecker {
         path: source.path,
         line: line,
         target: target.path,
-        message: 'part/part of files must remain in the same layer and '
+        message:
+            'part/part of files must remain in the same layer and '
             'feature.',
         anchor: '${source.zone.name}->${destination.zone.name}',
       ),
@@ -331,8 +322,7 @@ final class ArchitectureChecker {
   }) {
     final package = target.packageName;
 
-    if (source.zone == ArchitectureZone.featureDomain ||
-        source.zone == ArchitectureZone.sharedDomain) {
+    if (source.zone == ArchitectureZone.featureDomain || source.zone == ArchitectureZone.sharedDomain) {
       if (!config.architecture.allowedDomainPackages.contains(package)) {
         _add(
           violations,
@@ -375,7 +365,8 @@ final class ArchitectureChecker {
           path: source.path,
           line: line,
           target: target.uri,
-          message: 'Presentation cannot depend on infrastructure '
+          message:
+              'Presentation cannot depend on infrastructure '
               'package:$package.',
           anchor: package,
         ),
@@ -402,7 +393,8 @@ final class ArchitectureChecker {
           path: source.path,
           line: line,
           target: target.path,
-          message: 'Feature ${source.feature} cannot directly import feature '
+          message:
+              'Feature ${source.feature} cannot directly import feature '
               '${destination.feature}.',
           anchor: '${source.feature}->${destination.feature}',
         ),
@@ -421,7 +413,8 @@ final class ArchitectureChecker {
           path: source.path,
           line: line,
           target: target.path,
-          message: 'Presentation cannot import internal infrastructure at '
+          message:
+              'Presentation cannot import internal infrastructure at '
               '${target.path}.',
           anchor: target.path,
         ),
@@ -432,26 +425,24 @@ final class ArchitectureChecker {
     final allowed = switch (source.zone) {
       ArchitectureZone.app => true,
       ArchitectureZone.core => _isOneOf(
-          destination.zone,
-          const {
-            ArchitectureZone.core,
-            ArchitectureZone.sharedDomain,
-          },
-        ),
-      ArchitectureZone.sharedDomain =>
-        destination.zone == ArchitectureZone.sharedDomain,
+        destination.zone,
+        const {
+          ArchitectureZone.core,
+          ArchitectureZone.sharedDomain,
+        },
+      ),
+      ArchitectureZone.sharedDomain => destination.zone == ArchitectureZone.sharedDomain,
       ArchitectureZone.sharedOther => _isOneOf(
-          destination.zone,
-          const {
-            ArchitectureZone.sharedDomain,
-            ArchitectureZone.sharedOther,
-            ArchitectureZone.core,
-          },
-        ),
+        destination.zone,
+        const {
+          ArchitectureZone.sharedDomain,
+          ArchitectureZone.sharedOther,
+          ArchitectureZone.core,
+        },
+      ),
       ArchitectureZone.featureDomain =>
         destination.zone == ArchitectureZone.sharedDomain ||
-            (destination.zone == ArchitectureZone.featureDomain &&
-                destination.feature == source.feature),
+            (destination.zone == ArchitectureZone.featureDomain && destination.feature == source.feature),
       ArchitectureZone.featureApplication =>
         destination.zone == ArchitectureZone.sharedDomain ||
             (destination.feature == source.feature &&
@@ -522,8 +513,7 @@ final class ArchitectureChecker {
   }) {
     final patterns = <(RegExp, String)>[
       (RegExp(r'\bGetIt\s*\.\s*(?:I|instance)\b'), 'GetIt.instance'),
-      for (final identifier
-          in config.architecture.serviceLocatorIdentifiers)
+      for (final identifier in config.architecture.serviceLocatorIdentifiers)
         (
           RegExp(
             '\\b${RegExp.escape(identifier)}\\s*\\.\\s*'
@@ -543,7 +533,8 @@ final class ArchitectureChecker {
           rule: 'service_locator_in_presentation',
           path: relativePath,
           line: line,
-          message: 'Resolve dependencies in DI/router/provider factories, '
+          message:
+              'Resolve dependencies in DI/router/provider factories, '
               'not in presentation widgets.',
           anchor: anchor,
         ),
@@ -570,8 +561,7 @@ final class ArchitectureChecker {
     }
   }
 
-  bool _isOneOf(ArchitectureZone zone, Set<ArchitectureZone> allowed) =>
-      allowed.contains(zone);
+  bool _isOneOf(ArchitectureZone zone, Set<ArchitectureZone> allowed) => allowed.contains(zone);
 }
 
 final class _SourcePatternVisitor extends RecursiveAstVisitor<void> {
@@ -618,7 +608,8 @@ final class _SourcePatternVisitor extends RecursiveAstVisitor<void> {
           rule: 'service_locator_in_presentation',
           path: relativePath,
           line: lineForOffset(node.offset),
-          message: 'Resolve dependencies in DI/router/provider factories, '
+          message:
+              'Resolve dependencies in DI/router/provider factories, '
               'not in presentation widgets.',
           anchor: methodName,
         ),
@@ -632,9 +623,7 @@ final class _SourcePatternVisitor extends RecursiveAstVisitor<void> {
   void visitClassDeclaration(ClassDeclaration node) {
     final name = node.classKeyword.next?.lexeme ?? node.toSource();
     final looksLikeDto = name.endsWith('Dto') || name.endsWith('DTO');
-    if (enforceDtoLocation &&
-        looksLikeDto &&
-        source.zone != ArchitectureZone.featureData) {
+    if (enforceDtoLocation && looksLikeDto && source.zone != ArchitectureZone.featureData) {
       addViolation(
         ArchitectureViolation(
           rule: 'dto_outside_data',

@@ -15,7 +15,8 @@ This starter deliberately excludes TV/D-pad navigation, focus graphs, permanent 
 
 ## Requirements
 
-- Dart 3.11 or newer; a current Flutter SDK already includes Dart.
+- Flutter 3.44.2 stable is the recommended SDK for CI parity.
+- Dart 3.11 or newer for the isolated harness package; Flutter 3.44.2 includes Dart 3.12.2.
 - Git for changed-scope test selection. Without Git metadata, the configured fallback is the full test suite.
 
 The harness package is isolated under `tool/agent_harness`; its analyzer/tooling dependencies are not added to the application's dependency graph.
@@ -32,7 +33,7 @@ docs/
 tool/
 ```
 
-Generated feature code expects `flutter_bloc` and, when DI module generation is enabled, `get_it` in the application. Merge the relevant entries from `pubspec.harness.snippet.yaml`. Also merge `analysis_options.harness.snippet.yaml` into the application's root analysis options so the nested tool package is analyzed only in its own package context. Then run:
+Generated feature code expects `flutter_bloc` and, when DI module generation is enabled, `get_it` in the application. Merge the relevant entries from `pubspec.harness.snippet.yaml`, including the `very_good_analysis` dev dependency. Use `analysis_options.harness.snippet.yaml` as the application's root analysis options, or merge it into an existing file. The analyzer preset mirrors `fl_init_analyzer`, and still excludes the nested tool package so it is analyzed only in its own package context. Then run:
 
 ```bash
 flutter pub get
@@ -79,6 +80,8 @@ dart pub get
 dart analyze
 dart test
 ```
+
+`tool/agent_harness/analysis_options.yaml` includes the shared analyzer preset and adds local exceptions for generator and CLI implementation code.
 
 ## Configuration
 

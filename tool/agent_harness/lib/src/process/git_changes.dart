@@ -123,9 +123,7 @@ final class TestSelection {
       );
     }
 
-    final nonDocumentation = changes.files
-        .where((path) => !isDocumentationPath(path))
-        .toList(growable: false);
+    final nonDocumentation = changes.files.where((path) => !isDocumentationPath(path)).toList(growable: false);
     if (nonDocumentation.isEmpty) {
       return const TestSelection(
         runAll: false,
@@ -186,7 +184,8 @@ final class TestSelection {
         runAll: true,
         skip: false,
         paths: [],
-        reason: 'A shared, app-level, dependency, tooling, or unclassified '
+        reason:
+            'A shared, app-level, dependency, tooling, or unclassified '
             'Dart file changed.',
       );
     }

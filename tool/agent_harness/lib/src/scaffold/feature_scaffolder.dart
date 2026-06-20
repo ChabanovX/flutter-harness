@@ -42,8 +42,7 @@ final class FeatureScaffolder {
       naming: naming,
       stateStyle: stateStyle,
       featurePackageRoot: config.project.packagePath(featureBase),
-      sharedDomainPackageRoot:
-          config.project.packagePath(config.project.sharedDomainRoot),
+      sharedDomainPackageRoot: config.project.packagePath(config.project.sharedDomainRoot),
       failureMapperPackagePath: config.project.packagePath(
         p.posix.join(config.project.coreRoot, 'errors/failure_mapper.dart'),
       ),
@@ -111,15 +110,17 @@ final class FeatureScaffolder {
 
     if (generateGetItModule) {
       files[p.posix.join(
-        config.project.appRoot,
-        'di/${naming.featureSnake}_module.dart',
-      )] = templates.diModule;
+            config.project.appRoot,
+            'di/${naming.featureSnake}_module.dart',
+          )] =
+          templates.diModule;
     }
     if (generateWidgetTest) {
       files[p.posix.join(
-        testBase,
-        'presentation/pages/${naming.featureSnake}_page_test.dart',
-      )] = templates.widgetTest;
+            testBase,
+            'presentation/pages/${naming.featureSnake}_page_test.dart',
+          )] =
+          templates.widgetTest;
     }
 
     final written = <String>[];

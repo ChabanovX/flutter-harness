@@ -11,10 +11,10 @@ import 'verify_command.dart';
 
 final class AgentHarnessCommandRunner extends CommandRunner<int> {
   AgentHarnessCommandRunner()
-      : super(
-          'agent_harness',
-          'Architecture, verification, and scaffolding for Flutter projects.',
-        ) {
+    : super(
+        'agent_harness',
+        'Architecture, verification, and scaffolding for Flutter projects.',
+      ) {
     argParser.addOption(
       'root',
       help: 'Application root containing pubspec.yaml.',

@@ -47,8 +47,7 @@ final class VerifyCommand extends Command<int> {
   }
 
   @override
-  String get description =>
-      'Run formatting, analysis, architecture checks, and affected tests.';
+  String get description => 'Run formatting, analysis, architecture checks, and affected tests.';
 
   @override
   String get name => 'verify';
@@ -76,9 +75,10 @@ final class VerifyCommand extends Command<int> {
 
     if (!skipFormat) {
       final paths = context.config.verification.formatPaths
-          .where((path) =>
-              File('${context.root.path}/$path').existsSync() ||
-              Directory('${context.root.path}/$path').existsSync())
+          .where(
+            (path) =>
+                File('${context.root.path}/$path').existsSync() || Directory('${context.root.path}/$path').existsSync(),
+          )
           .toList(growable: false);
       if (paths.isNotEmpty) {
         final code = await context.executor.run(
@@ -103,9 +103,9 @@ final class VerifyCommand extends Command<int> {
       context: context,
       includeAccepted: false,
     );
-    final architectureFailed = architectureReport.newViolations.isNotEmpty ||
-        (context.config.architecture.failOnStaleBaseline &&
-            architectureReport.staleBaselineFingerprints.isNotEmpty);
+    final architectureFailed =
+        architectureReport.newViolations.isNotEmpty ||
+        (context.config.architecture.failOnStaleBaseline && architectureReport.staleBaselineFingerprints.isNotEmpty);
     results.add(_StepResult('architecture', architectureFailed ? 1 : 0));
 
     if (!skipTests && context.config.verification.tests) {
@@ -113,16 +113,13 @@ final class VerifyCommand extends Command<int> {
         context: context,
         isFlutter: isFlutter,
         runAll: all,
-        base: argResults?['base'] as String? ??
-            context.config.verification.changedBase,
+        base: argResults?['base'] as String? ?? context.config.verification.changedBase,
       );
       results.add(testResult);
     }
 
     if (!skipExtra) {
-      for (var index = 0;
-          index < context.config.verification.extraCommands.length;
-          index += 1) {
+      for (var index = 0; index < context.config.verification.extraCommands.length; index += 1) {
         final command = context.config.verification.extraCommands[index];
         final code = await context.executor.runShell(command);
         results.add(_StepResult('extra-${index + 1}', code));

@@ -21,13 +21,13 @@ final class ArchitectureViolation implements Comparable<ArchitectureViolation> {
   String get fingerprint => '$rule|$path|${target ?? ''}|$anchor';
 
   Map<String, Object?> toJson() => {
-        'fingerprint': fingerprint,
-        'rule': rule,
-        'path': path,
-        'line': line,
-        if (target != null) 'target': target,
-        'message': message,
-      };
+    'fingerprint': fingerprint,
+    'rule': rule,
+    'path': path,
+    'line': line,
+    if (target != null) 'target': target,
+    'message': message,
+  };
 
   @override
   int compareTo(ArchitectureViolation other) {
@@ -92,15 +92,14 @@ final class ArchitectureReport {
   final List<String> staleBaselineFingerprints;
 
   Map<String, Object?> toJson() => {
-        'summary': {
-          'total': violations.length,
-          'new': newViolations.length,
-          'accepted': acceptedViolations.length,
-          'stale_baseline': staleBaselineFingerprints.length,
-        },
-        'new_violations': newViolations.map((item) => item.toJson()).toList(),
-        'accepted_violations':
-            acceptedViolations.map((item) => item.toJson()).toList(),
-        'stale_baseline_fingerprints': staleBaselineFingerprints,
-      };
+    'summary': {
+      'total': violations.length,
+      'new': newViolations.length,
+      'accepted': acceptedViolations.length,
+      'stale_baseline': staleBaselineFingerprints.length,
+    },
+    'new_violations': newViolations.map((item) => item.toJson()).toList(),
+    'accepted_violations': acceptedViolations.map((item) => item.toJson()).toList(),
+    'stale_baseline_fingerprints': staleBaselineFingerprints,
+  };
 }

@@ -1,10 +1,10 @@
 final class FeatureNaming {
   FeatureNaming({required String feature, String? entity})
-      : featureSnake = _validateSnakeCase(feature, label: 'feature'),
-        entitySnake = _validateSnakeCase(
-          entity ?? _singularize(feature),
-          label: 'entity',
-        );
+    : featureSnake = _validateSnakeCase(feature, label: 'feature'),
+      entitySnake = _validateSnakeCase(
+        entity ?? _singularize(feature),
+        label: 'entity',
+      );
 
   final String featureSnake;
   final String entitySnake;

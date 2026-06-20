@@ -4,3 +4,6 @@
 dependencies:
   flutter_bloc: any
   get_it: any
+
+dev_dependencies:
+  very_good_analysis: ^10.2.0

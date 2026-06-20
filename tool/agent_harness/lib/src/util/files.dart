@@ -4,8 +4,7 @@ import 'package:path/path.dart' as p;
 
 String toPosixPath(String value) => value.replaceAll('\\', '/');
 
-String relativePosix(String path, {required String from}) =>
-    toPosixPath(p.relative(path, from: from));
+String relativePosix(String path, {required String from}) => toPosixPath(p.relative(path, from: from));
 
 Iterable<File> dartFilesUnder(Directory directory) sync* {
   if (!directory.existsSync()) return;
@@ -16,9 +15,7 @@ Iterable<File> dartFilesUnder(Directory directory) sync* {
   for (final entity in entities) {
     if (entity is! File || !entity.path.endsWith('.dart')) continue;
     final normalized = toPosixPath(entity.path);
-    if (normalized.contains('/.dart_tool/') ||
-        normalized.contains('/build/') ||
-        normalized.contains('/.git/')) {
+    if (normalized.contains('/.dart_tool/') || normalized.contains('/build/') || normalized.contains('/.git/')) {
       continue;
     }
     yield entity;

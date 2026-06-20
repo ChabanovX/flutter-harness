@@ -16,8 +16,7 @@ final class InitCommand extends Command<int> {
   }
 
   @override
-  String get description =>
-      'Create shared result/failure primitives and architecture directories.';
+  String get description => 'Create shared result/failure primitives and architecture directories.';
 
   @override
   String get name => 'init';
@@ -34,7 +33,8 @@ final class InitCommand extends Command<int> {
       project.coreRoot,
       'errors/failure_mapper.dart',
     );
-    final failureImport = 'package:${context.config.packageName}/'
+    final failureImport =
+        'package:${context.config.packageName}/'
         '${project.packagePath(failurePath)}';
 
     final files = <String, String>{

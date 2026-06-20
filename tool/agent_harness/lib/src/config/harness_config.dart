@@ -25,9 +25,7 @@ final class HarnessConfig {
 
   static HarnessConfig load(Directory root) {
     final configFile = File(p.join(root.path, '.agent_harness.yaml'));
-    final config = configFile.existsSync()
-        ? loadYaml(configFile.readAsStringSync())
-        : <String, Object?>{};
+    final config = configFile.existsSync() ? loadYaml(configFile.readAsStringSync()) : <String, Object?>{};
     final map = _asMap(config);
 
     final pubspecFile = File(p.join(root.path, 'pubspec.yaml'));
@@ -159,8 +157,7 @@ final class HarnessConfig {
         ),
         analyze: _boolean(verificationMap['analyze'], fallback: true),
         tests: _boolean(verificationMap['tests'], fallback: true),
-        changedBase: _nullableString(verificationMap['changed_base']) ??
-            'origin/main',
+        changedBase: _nullableString(verificationMap['changed_base']) ?? 'origin/main',
         fallbackToAllTests: _boolean(
           verificationMap['fallback_to_all_tests'],
           fallback: true,
@@ -215,19 +212,14 @@ final class ProjectConfig {
       'shared_root': sharedRoot,
     };
 
-    if (p.posix.isAbsolute(libRoot) ||
-        libRoot == '.' ||
-        libRoot == '..' ||
-        libRoot.startsWith('../')) {
+    if (p.posix.isAbsolute(libRoot) || libRoot == '.' || libRoot == '..' || libRoot.startsWith('../')) {
       throw FormatException(
         'lib_root must be a project-relative directory: $libRoot',
       );
     }
 
     for (final entry in roots.entries) {
-      if (p.posix.isAbsolute(entry.value) ||
-          entry.value == libRoot ||
-          !p.posix.isWithin(libRoot, entry.value)) {
+      if (p.posix.isAbsolute(entry.value) || entry.value == libRoot || !p.posix.isWithin(libRoot, entry.value)) {
         throw FormatException(
           '${entry.key} must be a strict descendant of lib_root ($libRoot): '
           '${entry.value}',
@@ -237,12 +229,11 @@ final class ProjectConfig {
 
     final entries = roots.entries.toList(growable: false);
     for (var leftIndex = 0; leftIndex < entries.length; leftIndex += 1) {
-      for (var rightIndex = leftIndex + 1;
-          rightIndex < entries.length;
-          rightIndex += 1) {
+      for (var rightIndex = leftIndex + 1; rightIndex < entries.length; rightIndex += 1) {
         final left = entries[leftIndex];
         final right = entries[rightIndex];
-        final overlaps = left.value == right.value ||
+        final overlaps =
+            left.value == right.value ||
             p.posix.isWithin(left.value, right.value) ||
             p.posix.isWithin(right.value, left.value);
         if (overlaps) {
@@ -305,9 +296,8 @@ final class ArchitectureException {
     required this.source,
     required this.target,
     required this.reason,
-  })  : _sourceGlob = Glob(source, context: p.posix),
-        _targetGlob =
-            target == null ? null : Glob(target, context: p.posix);
+  }) : _sourceGlob = Glob(source, context: p.posix),
+       _targetGlob = target == null ? null : Glob(target, context: p.posix);
 
   final String rule;
   final String source;
@@ -325,8 +315,7 @@ final class ArchitectureException {
     if (!_sourceGlob.matches(toPosixPath(candidateSource))) return false;
     final targetGlob = _targetGlob;
     if (targetGlob == null) return true;
-    return candidateTarget != null &&
-        targetGlob.matches(toPosixPath(candidateTarget));
+    return candidateTarget != null && targetGlob.matches(toPosixPath(candidateTarget));
   }
 }
 
@@ -399,13 +388,10 @@ List<String> _normalizedPathList(
   Object? value, {
   required Iterable<String> fallback,
 }) {
-  return _stringList(value, fallback: fallback)
-      .map(_normalizedPath)
-      .toList(growable: false);
+  return _stringList(value, fallback: fallback).map(_normalizedPath).toList(growable: false);
 }
 
-String _normalizedPath(String value) =>
-    p.posix.normalize(toPosixPath(value.trim()));
+String _normalizedPath(String value) => p.posix.normalize(toPosixPath(value.trim()));
 
 List<ArchitectureException> _exceptions(Object? value) {
   if (value is! Iterable) return const [];

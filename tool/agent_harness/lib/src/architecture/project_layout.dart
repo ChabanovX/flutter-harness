@@ -33,11 +33,11 @@ final class SourceLocation {
 
 final class ProjectLayout {
   ProjectLayout(HarnessConfig config)
-      : _libRoot = _normalize(config.project.libRoot),
-        _featureRoot = _normalize(config.project.featureRoot),
-        _appRoot = _normalize(config.project.appRoot),
-        _coreRoot = _normalize(config.project.coreRoot),
-        _sharedRoot = _normalize(config.project.sharedRoot);
+    : _libRoot = _normalize(config.project.libRoot),
+      _featureRoot = _normalize(config.project.featureRoot),
+      _appRoot = _normalize(config.project.appRoot),
+      _coreRoot = _normalize(config.project.coreRoot),
+      _sharedRoot = _normalize(config.project.sharedRoot);
 
   final String _libRoot;
   final String _featureRoot;
@@ -86,9 +86,7 @@ final class ProjectLayout {
       final sharedDomainRoot = p.posix.join(_sharedRoot, 'domain');
       return SourceLocation(
         path: path,
-        zone: _isInside(path, sharedDomainRoot)
-            ? ArchitectureZone.sharedDomain
-            : ArchitectureZone.sharedOther,
+        zone: _isInside(path, sharedDomainRoot) ? ArchitectureZone.sharedDomain : ArchitectureZone.sharedOther,
       );
     }
     if (_isInside(path, _libRoot)) {
@@ -98,9 +96,7 @@ final class ProjectLayout {
     return SourceLocation(path: path, zone: ArchitectureZone.unclassified);
   }
 
-  static String _normalize(String value) =>
-      p.posix.normalize(toPosixPath(value));
+  static String _normalize(String value) => p.posix.normalize(toPosixPath(value));
 
-  static bool _isInside(String path, String root) =>
-      path == root || p.posix.isWithin(root, path);
+  static bool _isInside(String path, String root) => path == root || p.posix.isWithin(root, path);
 }

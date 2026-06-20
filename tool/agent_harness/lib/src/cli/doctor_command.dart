@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/command_runner.dart';
 import 'package:path/path.dart' as p;
 
+import '../util/sdk_version.dart';
 import 'command_context.dart';
 
 final class DoctorCommand extends Command<int> {
@@ -26,11 +28,7 @@ final class DoctorCommand extends Command<int> {
     final pubspecText = pubspecFile.readAsStringSync();
     final isFlutter = pubspecText.contains(RegExp(r'sdk:\s*flutter'));
     if (isFlutter) {
-      failures += await _checkCommand(
-        context,
-        'flutter',
-        const ['--version', '--machine'],
-      );
+      failures += await _checkFlutterSdk(context);
     }
 
     final configFile = File(p.join(context.root.path, '.agent_harness.yaml'));
@@ -45,9 +43,7 @@ final class DoctorCommand extends Command<int> {
     final harnessPubspec = File(
       p.join(context.root.path, 'tool', 'agent_harness', 'pubspec.yaml'),
     );
-    final launcher = File(
-      p.join(context.root.path, 'tool', 'harness.dart'),
-    );
+    final launcher = File(p.join(context.root.path, 'tool', 'harness.dart'));
     if (harnessPubspec.existsSync() && launcher.existsSync()) {
       context.console.success('Isolated harness package and launcher found.');
     } else {
@@ -99,6 +95,63 @@ final class DoctorCommand extends Command<int> {
     }
     context.console.error('$executable is not available on PATH.');
     return 1;
+  }
+
+  Future<int> _checkFlutterSdk(CommandContext context) async {
+    try {
+      final result = await context.executor.capture('flutter', const [
+        '--version',
+        '--machine',
+      ]);
+      if (result.exitCode != 0) {
+        context.console.error('flutter is not available on PATH.');
+        return 1;
+      }
+
+      final output = '${result.stdout}${result.stderr}'.trim();
+      final decoded = jsonDecode(output);
+      if (decoded is! Map<String, Object?>) {
+        context.console.warning(
+          'Could not parse flutter --version --machine output.',
+        );
+        return 0;
+      }
+
+      final flutterText = decoded['flutterVersion']?.toString();
+      final dartText = decoded['dartSdkVersion']?.toString();
+      final flutterVersion = SdkVersion.tryParse(flutterText ?? '');
+      final dartVersion = SdkVersion.tryParse(dartText ?? '');
+      final details = [
+        if (flutterVersion != null) 'Flutter $flutterVersion',
+        if (dartVersion != null) 'Dart $dartVersion',
+      ].join(', ');
+      context.console.success(
+        'flutter available${details.isEmpty ? '' : ': $details'}',
+      );
+
+      if (flutterVersion == null) {
+        context.console.warning(
+          'Could not parse Flutter version. Recommended stable SDK is '
+          '$recommendedFlutterVersion with Dart $recommendedFlutterDartVersion.',
+        );
+      } else if (flutterVersion < recommendedFlutterVersion) {
+        context.console.warning(
+          'Flutter $flutterVersion is older than the recommended stable SDK '
+          '$recommendedFlutterVersion with Dart $recommendedFlutterDartVersion. '
+          'CI templates are pinned to $recommendedFlutterVersion.',
+        );
+      }
+
+      return 0;
+    } on FormatException {
+      context.console.warning(
+        'Could not parse flutter --version --machine output.',
+      );
+      return 0;
+    } on ProcessException {
+      context.console.error('flutter is not available on PATH.');
+      return 1;
+    }
   }
 }
 

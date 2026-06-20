@@ -40,8 +40,7 @@ final class ArchitectureCommand extends Command<int> {
     final report = ArchitectureChecker(context.config).check();
     final updateBaseline = argResults?['update-baseline'] as bool? ?? false;
     final json = argResults?['json'] as bool? ?? false;
-    final includeAccepted =
-        argResults?['include-accepted'] as bool? ?? false;
+    final includeAccepted = argResults?['include-accepted'] as bool? ?? false;
 
     if (updateBaseline) {
       final file = File(
@@ -68,8 +67,7 @@ final class ArchitectureCommand extends Command<int> {
       );
     }
 
-    final staleFails = context.config.architecture.failOnStaleBaseline &&
-        report.staleBaselineFingerprints.isNotEmpty;
+    final staleFails = context.config.architecture.failOnStaleBaseline && report.staleBaselineFingerprints.isNotEmpty;
     return report.newViolations.isEmpty && !staleFails ? 0 : 1;
   }
 }

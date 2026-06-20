@@ -1,1 +1,16 @@
-include: package:lints/recommended.yaml
+include: ../../analysis_options.harness.snippet.yaml
+
+linter:
+  rules:
+    always_use_package_imports: false
+    avoid_catching_errors: false
+    avoid_equals_and_hash_code_on_mutable_classes: false
+    avoid_redundant_argument_values: false
+    cascade_invocations: false
+    document_ignores: false
+    leading_newlines_in_multiline_strings: false
+    parameter_assignments: false
+    prefer_constructors_over_static_methods: false
+    prefer_single_quotes: false
+    unnecessary_raw_strings: false
+    use_raw_strings: false

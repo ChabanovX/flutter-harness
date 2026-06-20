@@ -17,8 +17,8 @@ void main() {
       project.write(
         'lib/features/catalog/domain/catalog_item.dart',
         "import 'dart:io';\n"
-        "import 'package:flutter/widgets.dart';\n"
-        "final class CatalogItem {}\n",
+            "import 'package:flutter/widgets.dart';\n"
+            "final class CatalogItem {}\n",
       );
       project.write(
         'lib/features/catalog/presentation/catalog_page.dart',

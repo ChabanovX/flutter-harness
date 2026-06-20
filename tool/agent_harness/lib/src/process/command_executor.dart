@@ -45,9 +45,7 @@ final class CommandExecutor {
 
   Future<int> runShell(String command) async {
     final executable = Platform.isWindows ? 'cmd' : 'sh';
-    final arguments = Platform.isWindows
-        ? <String>['/c', command]
-        : <String>['-lc', command];
+    final arguments = Platform.isWindows ? <String>['/c', command] : <String>['-lc', command];
     return run(executable, arguments);
   }
 }

@@ -1,6 +1,28 @@
-# Merge into the application's root analysis_options.yaml.
-# The nested harness package is analyzed separately in its own package context.
+# Analyzer preset for applications that use the harness.
+# Matches the local fl_init_analyzer defaults and keeps the nested harness
+# package analyzed separately in its own package context.
+
+include:
+  - package:very_good_analysis/analysis_options.yaml
+
+formatter:
+  page_width: 120
+  trailing_commas: preserve
 
 analyzer:
+  errors:
+    invalid_annotation_target: ignore
   exclude:
     - tool/agent_harness/**
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/*.gen.dart"
+    - "**/*.mocks.dart"
+    - "**/*.pb.dart"
+
+linter:
+  rules:
+    prefer_int_literals: false
+    omit_local_variable_types: false
+    public_member_api_docs: false
+    lines_longer_than_80_chars: false
