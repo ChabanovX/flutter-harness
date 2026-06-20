@@ -115,7 +115,7 @@ dart run tool/harness.dart golden --update
 dart run tool/harness.dart scaffold feature notifications --entity notification
 ```
 
-The scaffolder creates domain, application, data, presentation, DI-registration, and test files. Generated pages read copy from `AppLocalizations` and spacing from the design token extension. It does not invent the concrete HTTP implementation or edit the router automatically; those are intentionally explicit integration steps.
+The scaffolder creates domain, application, data, presentation, DI-registration, and test files. Generated pages read copy from `AppLocalizations` and spacing from the design token extension. It does not invent the concrete HTTP implementation or edit the router automatically; those are intentionally explicit integration steps. Screen navigation belongs in the router/composition layer: feature UI should dispatch typed navigation intent instead of constructing routes or calling `Navigator.push`/`GoRouter` directly.
 
 ## Harness self-checks
 

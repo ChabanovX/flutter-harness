@@ -82,6 +82,8 @@ Reusable infrastructure and design-system code with no feature knowledge.
 
 The router is the source of truth for page location, nested navigation, deep links, restoration, and browser history. Session state may drive redirects. Feature Cubits can emit state that causes the UI to request navigation, but they do not maintain a parallel route stack.
 
+Screen transitions are declared in the app router or another explicit composition root. Route-scoped Cubits are provided there with `BlocProvider`, while feature widgets dispatch typed navigation intent through an app-level navigation contract instead of calling `Navigator.push`, constructing page routes, or using `GoRouter` directly. Local `Navigator.pop`/`maybePop` remains acceptable for closing dialogs, sheets, and other transient UI.
+
 ## Dependency injection
 
 There is one public composition entry point, split into core and feature registration modules. Registration constructs the graph; startup performs side effects. Page Cubits are factories unless their product lifetime explicitly requires otherwise.

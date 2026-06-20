@@ -28,6 +28,6 @@ It also generates:
 - widget smoke/state test when enabled;
 - a GetIt registration module.
 
-The concrete HTTP datasource and router registration are intentionally left explicit. Different projects use Dio, Retrofit, GraphQL, gRPC, local-first stores, or P2P adapters; the architectural boundary is stable while the adapter is project-specific.
+The concrete HTTP datasource and router registration are intentionally left explicit. Different projects use Dio, Retrofit, GraphQL, gRPC, local-first stores, or P2P adapters; the architectural boundary is stable while the adapter is project-specific. Route construction and route-scoped `BlocProvider` wiring stay in the router/composition layer; generated feature widgets do not own screen transitions.
 
 Before accepting a new pattern, update one canonical feature and this document rather than allowing multiple competing conventions.

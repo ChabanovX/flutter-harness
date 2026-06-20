@@ -162,6 +162,96 @@ String _formatLabel(String value) => value;
       expect(rules, contains('page_private_helper'));
     });
 
+    test('reports imperative screen navigation in feature UI', () {
+      final project = TestProject.create();
+      addTearDown(project.dispose);
+      project.write(
+        'lib/features/catalog/presentation/pages/catalog_page.dart',
+        '''import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+Widget buildCatalog(BuildContext context) {
+  Navigator.of(context).push<void>(
+    MaterialPageRoute<void>(
+      builder: (_) => const SizedBox.shrink(),
+    ),
+  );
+  Navigator.pushNamed(context, '/details');
+  context.go('/details');
+  GoRouter.of(context).push('/details');
+  return const SizedBox.shrink();
+}
+''',
+      );
+
+      final report = QualityChecker(HarnessConfig.load(project.root)).check();
+      final rules = report.violations.map((item) => item.rule).toSet();
+
+      expect(rules, contains('imperative_screen_navigation'));
+    });
+
+    test('allows transient pop, router composition, and widget test wrappers', () {
+      final project = TestProject.create();
+      addTearDown(project.dispose);
+      project
+        ..write(
+          'lib/features/catalog/presentation/pages/catalog_page.dart',
+          '''import 'package:flutter/material.dart';
+
+Future<void> closeTransientUi(BuildContext context) async {
+  Navigator.of(context).pop();
+  await Navigator.maybePop(context);
+}
+''',
+        )
+        ..write(
+          'lib/app/router/app_router.dart',
+          '''import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+final router = GoRouter(
+  routes: [
+    GoRoute(
+      path: '/details',
+      builder: (context, state) => const SizedBox.shrink(),
+    ),
+  ],
+);
+
+void openFromRouter(BuildContext context) {
+  context.go('/details');
+}
+''',
+        )
+        ..write(
+          'test/features/catalog/presentation/pages/catalog_page_test.dart',
+          '''import 'package:flutter/material.dart';
+
+Widget buildHost() {
+  return MaterialApp(
+    home: Builder(
+      builder: (context) {
+        Navigator.of(context).push<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => const SizedBox.shrink(),
+          ),
+        );
+        return const SizedBox.shrink();
+      },
+    ),
+  );
+}
+''',
+        );
+
+      final report = QualityChecker(HarnessConfig.load(project.root)).check();
+
+      expect(
+        report.violations.where((item) => item.rule == 'imperative_screen_navigation'),
+        isEmpty,
+      );
+    });
+
     test('does not apply widget l10n or design checks to Cubit tests', () {
       final project = TestProject.create();
       addTearDown(project.dispose);
