@@ -132,7 +132,8 @@ final class HarnessInstaller {
     _validateFlutterProject(projectRoot);
     await _validateGitProject(projectRoot);
 
-    final repositoryUrl = options.repositoryUrl ?? await _inferRepositoryUrl(harnessRoot);
+    final repositoryUrl =
+        options.repositoryUrl ?? await _inferRepositoryUrl(harnessRoot);
     await _ensureSubmodule(
       projectRoot: projectRoot,
       repositoryUrl: repositoryUrl,
@@ -151,9 +152,7 @@ final class HarnessInstaller {
     }
 
     stdout
-      ..writeln(
-        'Harness installed as submodule at ${options.submodulePath}.',
-      )
+      ..writeln('Harness installed as submodule at ${options.submodulePath}.')
       ..writeln('Next: dart run tool/harness.dart doctor');
   }
 
@@ -315,7 +314,7 @@ final class HarnessInstaller {
 
 String renderSubmoduleLauncher(String submodulePath) {
   final path = _toPosix(submodulePath);
-  return '''
+  return _withoutLeadingNewline('''
 import 'dart:io';
 
 Future<void> main(List<String> arguments) async {
@@ -382,8 +381,7 @@ Future<void> main(List<String> arguments) async {
   );
   exitCode = await process.exitCode;
 }
-'''
-      .substring(1);
+''');
 }
 
 String renderAgentInstructions(String source, String submodulePath) {
@@ -393,15 +391,19 @@ String renderAgentInstructions(String source, String submodulePath) {
 
 String renderAnalysisOptions(String submodulePath) {
   final path = _toPosix(submodulePath);
-  return '''
+  return _withoutLeadingNewline('''
 include:
   - $path/analysis_options.harness.snippet.yaml
 
 analyzer:
   exclude:
     - $path/**
-'''
-      .substring(1);
+''');
+}
+
+String _withoutLeadingNewline(String value) {
+  if (value.startsWith('\n')) return value.substring(1);
+  return value;
 }
 
 Future<void> _run(

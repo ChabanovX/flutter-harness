@@ -8,6 +8,7 @@ void main() {
       installer.defaultSubmodulePath,
     );
 
+    expect(launcher, startsWith("import 'dart:io';"));
     expect(launcher, contains('tool'));
     expect(launcher, contains('flutter_agentic_harness'));
     expect(launcher, contains('agent_harness'));
@@ -31,6 +32,7 @@ void main() {
       installer.defaultSubmodulePath,
     );
 
+    expect(options, startsWith('include:'));
     expect(
       options,
       contains(
