@@ -410,8 +410,7 @@ final class ${naming.featurePascal}Page extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = $localizationsClass.of(context);
-    final spacing =
-        Theme.of(context).extension<AppSpacing>() ?? AppSpacing.regular;
+    final spacing = Theme.of(context).extension<AppSpacing>()!;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.featurePageTitle('${naming.featurePascal}'))),
@@ -554,8 +553,7 @@ final class ${naming.featurePascal}Page extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = $localizationsClass.of(context);
-    final spacing =
-        Theme.of(context).extension<AppSpacing>() ?? AppSpacing.regular;
+    final spacing = Theme.of(context).extension<AppSpacing>()!;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.featurePageTitle('${naming.featurePascal}'))),

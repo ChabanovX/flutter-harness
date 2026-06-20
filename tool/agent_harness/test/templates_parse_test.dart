@@ -86,6 +86,11 @@ void main() {
 
       expect(templates.page, contains('AppLocalizations.of(context)'));
       expect(templates.page, contains('AppSpacing'));
+      expect(
+        templates.page,
+        contains('Theme.of(context).extension<AppSpacing>()!'),
+      );
+      expect(templates.page, isNot(contains('?? AppSpacing.regular')));
       expect(templates.page, contains('l10n.emptyStateMessage'));
       expect(templates.page, contains('l10n.retryAction'));
       expect(templates.page, isNot(contains("Text('Nothing here yet.')")));

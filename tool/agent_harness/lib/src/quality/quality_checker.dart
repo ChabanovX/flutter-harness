@@ -87,6 +87,15 @@ final class QualityChecker {
       );
     }
 
+    if (_isFeaturePagePath(relativePath)) {
+      _checkPagePrivateHelpers(
+        unit: result.unit,
+        relativePath: relativePath,
+        lineForOffset: (offset) => result.lineInfo.getLocation(offset).lineNumber,
+        violations: violations,
+      );
+    }
+
     final developerImport = _DeveloperImport.from(result.unit.directives);
     result.unit.accept(
       _QualityAstVisitor(
@@ -130,6 +139,39 @@ final class QualityChecker {
 
   bool _isLoggingFacadePath(String relativePath) {
     return relativePath.startsWith('${config.project.coreRoot}/logging/');
+  }
+
+  bool _isFeaturePagePath(String relativePath) {
+    final featureRoot = config.project.featureRoot;
+    if (!relativePath.startsWith('$featureRoot/')) return false;
+    final remainder = p.posix.relative(relativePath, from: featureRoot);
+    final segments = p.posix.split(remainder);
+    return segments.length >= 4 &&
+        segments[1] == 'presentation' &&
+        segments[2] == 'pages' &&
+        segments.last.endsWith('_page.dart');
+  }
+
+  void _checkPagePrivateHelpers({
+    required CompilationUnit unit,
+    required String relativePath,
+    required int Function(int offset) lineForOffset,
+    required List<QualityViolation> violations,
+  }) {
+    for (final declaration in unit.declarations.whereType<FunctionDeclaration>()) {
+      final name = declaration.name.lexeme;
+      if (!name.startsWith('_')) continue;
+      _add(
+        violations,
+        QualityViolation(
+          rule: 'page_private_helper',
+          path: relativePath,
+          line: lineForOffset(declaration.offset),
+          message: 'Move page-private helpers to presentation utilities, formatters, or localization helpers.',
+          anchor: name,
+        ),
+      );
+    }
   }
 
   void _add(List<QualityViolation> violations, QualityViolation violation) {
@@ -394,6 +436,19 @@ final class _QualityAstVisitor extends RecursiveAstVisitor<void> {
   }
 
   @override
+  void visitBinaryExpression(BinaryExpression node) {
+    if (enforceDesign && node.operator.lexeme == '??' && _isThemeExtensionLookup(node.leftOperand)) {
+      _violate(
+        rule: 'theme_extension_fallback',
+        offset: node.offset,
+        message: 'Use a required ThemeExtension lookup; do not fall back to static design tokens.',
+        anchor: node.leftOperand.toSource(),
+      );
+    }
+    super.visitBinaryExpression(node);
+  }
+
+  @override
   void visitPrefixedIdentifier(PrefixedIdentifier node) {
     if (enforceDesign && node.prefix.name == 'Colors') {
       _violate(
@@ -511,6 +566,11 @@ final class _QualityAstVisitor extends RecursiveAstVisitor<void> {
     if (value == null) return false;
     final trimmed = value.trim();
     return trimmed.isNotEmpty && !trimmed.startsWith('assets/');
+  }
+
+  bool _isThemeExtensionLookup(Expression expression) {
+    final source = expression.toSource().replaceAll(RegExp(r'\s+'), '');
+    return RegExp(r'^Theme\.of\(.+\)\.extension<[^>]+>\(\)$').hasMatch(source);
   }
 
   bool _isDeveloperLogTarget(String? target) {

@@ -87,8 +87,7 @@ void loadAssets() {
 
 Widget buildCatalog(BuildContext context) {
   final l10n = AppLocalizations.of(context);
-  final spacing =
-      Theme.of(context).extension<AppSpacing>() ?? AppSpacing.regular;
+  final spacing = Theme.of(context).extension<AppSpacing>()!;
   return Padding(
     padding: spacing.page,
     child: Text(l10n.retryAction),
@@ -116,6 +115,51 @@ Widget buildLogo() {
       final report = QualityChecker(HarnessConfig.load(project.root)).check();
 
       expect(report.violations, isEmpty);
+    });
+
+    test('reports ThemeExtension fallback values', () {
+      final project = TestProject.create();
+      addTearDown(project.dispose);
+      project.write(
+        'lib/features/catalog/presentation/pages/catalog_page.dart',
+        '''import 'package:flutter/material.dart';
+
+Widget buildCatalog(BuildContext context) {
+  final spacing =
+      Theme.of(context).extension<AppSpacing>() ?? AppSpacing.regular;
+  return Padding(
+    padding: spacing.page,
+    child: const SizedBox.shrink(),
+  );
+}
+''',
+      );
+
+      final report = QualityChecker(HarnessConfig.load(project.root)).check();
+      final rules = report.violations.map((item) => item.rule).toSet();
+
+      expect(rules, contains('theme_extension_fallback'));
+    });
+
+    test('reports private helpers in feature page files', () {
+      final project = TestProject.create();
+      addTearDown(project.dispose);
+      project.write(
+        'lib/features/catalog/presentation/pages/catalog_page.dart',
+        '''import 'package:flutter/material.dart';
+
+Widget buildCatalog(BuildContext context) {
+  return Text(AppLocalizations.of(context).retryAction);
+}
+
+String _formatLabel(String value) => value;
+''',
+      );
+
+      final report = QualityChecker(HarnessConfig.load(project.root)).check();
+      final rules = report.violations.map((item) => item.rule).toSet();
+
+      expect(rules, contains('page_private_helper'));
     });
 
     test('does not apply widget l10n or design checks to Cubit tests', () {
