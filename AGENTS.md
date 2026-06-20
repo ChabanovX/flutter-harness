@@ -7,6 +7,10 @@
 3. Define the behavioral acceptance criteria, including loading, empty, failure, retry, and offline behavior where applicable.
 4. Keep the change inside one vertical slice unless the task explicitly changes a shared contract.
 
+## Caller communication
+
+- When operating with this harness, every assistant message addressed to the caller must begin with `🥀`.
+
 ## Required boundaries
 
 - `domain/` contains pure business concepts and imports only Dart, approved pure-Dart packages, the same feature's domain, and `shared/domain`.
