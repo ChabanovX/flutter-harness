@@ -132,8 +132,7 @@ final class HarnessInstaller {
     _validateFlutterProject(projectRoot);
     await _validateGitProject(projectRoot);
 
-    final repositoryUrl =
-        options.repositoryUrl ?? await _inferRepositoryUrl(harnessRoot);
+    final repositoryUrl = options.repositoryUrl ?? await _inferRepositoryUrl(harnessRoot);
     await _ensureSubmodule(
       projectRoot: projectRoot,
       repositoryUrl: repositoryUrl,
