@@ -78,6 +78,10 @@ Composition root, router, bootstrap, session wiring, global observers, and proce
 
 Reusable infrastructure and design-system code with no feature knowledge.
 
+## Constants
+
+Shared public constants live under `core/constants`. UI primitive values that feed theme extensions belong in `ui_constants.dart`; network endpoints, build-time network configuration, timeouts, and retry policy belong in `network_constants.dart`. Constants that only make sense inside one file stay private in that file instead of being promoted to shared API.
+
 ## Navigation
 
 The router is the source of truth for page location, nested navigation, deep links, restoration, and browser history. Session state may drive redirects. Feature Cubits can emit state that causes the UI to request navigation, but they do not maintain a parallel route stack.

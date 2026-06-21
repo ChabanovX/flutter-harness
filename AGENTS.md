@@ -23,6 +23,7 @@
 - DTOs and JSON/wire details never leave `data/`.
 - Widgets do not initiate I/O or mutate Cubits from `build()`.
 - Cross-feature imports are forbidden by default. Coordinate through shared contracts or an app-level coordinator.
+- Shared public constants live in `core/constants`: UI primitives in `ui_constants.dart`, network endpoints/config/timeouts/retry policy in `network_constants.dart`. Constants used only by one file stay private in that file.
 - Generated files are never edited manually.
 - Use `AppLogger` or the project's logging facade; do not add `print()`.
 

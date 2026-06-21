@@ -62,8 +62,14 @@ final class QualityChecker {
     final enforceAssets = config.quality.enforceAssets;
     final enforceLogging = config.quality.enforceLogging && !_isLoggingFacadePath(relativePath);
     final enforceNavigation = uiPath && !_isNavigationCompositionPath(relativePath);
+    final enforceConstants = _isLibPath(relativePath) && !_isSharedConstantsPath(relativePath);
 
-    if (!enforceDesign && !enforceLocalization && !enforceAssets && !enforceLogging && !enforceNavigation) {
+    if (!enforceDesign &&
+        !enforceLocalization &&
+        !enforceAssets &&
+        !enforceLogging &&
+        !enforceNavigation &&
+        !enforceConstants) {
       return;
     }
 
@@ -96,6 +102,14 @@ final class QualityChecker {
         violations: violations,
       );
     }
+    if (enforceConstants) {
+      _checkSharedConstantLocations(
+        unit: result.unit,
+        relativePath: relativePath,
+        lineForOffset: (offset) => result.lineInfo.getLocation(offset).lineNumber,
+        violations: violations,
+      );
+    }
 
     final developerImport = _DeveloperImport.from(result.unit.directives);
     result.unit.accept(
@@ -110,9 +124,14 @@ final class QualityChecker {
         enforceAssets: enforceAssets,
         enforceLogging: enforceLogging,
         enforceNavigation: enforceNavigation,
+        enforceConstants: enforceConstants,
         addViolation: (violation) => _add(violations, violation),
       ),
     );
+  }
+
+  bool _isLibPath(String relativePath) {
+    return relativePath.startsWith('${config.project.libRoot}/');
   }
 
   bool _isUiPath(String relativePath) {
@@ -156,6 +175,10 @@ final class QualityChecker {
         relativePath.startsWith('$appRoot/di/');
   }
 
+  bool _isSharedConstantsPath(String relativePath) {
+    return relativePath.startsWith('${config.project.coreRoot}/constants/');
+  }
+
   bool _isFeaturePagePath(String relativePath) {
     final featureRoot = config.project.featureRoot;
     if (!relativePath.startsWith('$featureRoot/')) return false;
@@ -186,6 +209,31 @@ final class QualityChecker {
           anchor: name,
         ),
       );
+    }
+  }
+
+  void _checkSharedConstantLocations({
+    required CompilationUnit unit,
+    required String relativePath,
+    required int Function(int offset) lineForOffset,
+    required List<QualityViolation> violations,
+  }) {
+    for (final declaration in unit.declarations.whereType<TopLevelVariableDeclaration>()) {
+      if (!declaration.variables.isConst) continue;
+      for (final variable in declaration.variables.variables) {
+        final name = variable.name.lexeme;
+        if (name.startsWith('_')) continue;
+        _add(
+          violations,
+          QualityViolation(
+            rule: 'shared_constant_location',
+            path: relativePath,
+            line: lineForOffset(variable.offset),
+            message: 'Move shared public constants to core/constants; keep file-local constants private.',
+            anchor: name,
+          ),
+        );
+      }
     }
   }
 
@@ -285,6 +333,7 @@ final class _QualityAstVisitor extends RecursiveAstVisitor<void> {
     required this.enforceAssets,
     required this.enforceLogging,
     required this.enforceNavigation,
+    required this.enforceConstants,
     required this.addViolation,
   });
 
@@ -324,6 +373,7 @@ final class _QualityAstVisitor extends RecursiveAstVisitor<void> {
   final bool enforceAssets;
   final bool enforceLogging;
   final bool enforceNavigation;
+  final bool enforceConstants;
   final void Function(QualityViolation violation) addViolation;
 
   @override
@@ -391,6 +441,15 @@ final class _QualityAstVisitor extends RecursiveAstVisitor<void> {
       );
     }
 
+    if (enforceConstants && _isCompileTimeEnvironmentLookup(node)) {
+      _violate(
+        rule: 'shared_constant_location',
+        offset: node.offset,
+        message: 'Compile-time configuration constants belong in core/constants.',
+        anchor: node.toSource(),
+      );
+    }
+
     if (enforceDesign && constructor != null && className != null) {
       _checkDesignConstructor(
         constructor: constructor,
@@ -453,6 +512,19 @@ final class _QualityAstVisitor extends RecursiveAstVisitor<void> {
     }
 
     super.visitMethodInvocation(node);
+  }
+
+  @override
+  void visitSimpleStringLiteral(SimpleStringLiteral node) {
+    if (enforceConstants && _isNetworkLiteral(node.value)) {
+      _violate(
+        rule: 'network_constant_location',
+        offset: node.offset,
+        message: 'Move network endpoints and external base URLs to core/constants/network_constants.dart.',
+        anchor: node.value,
+      );
+    }
+    super.visitSimpleStringLiteral(node);
   }
 
   @override
@@ -632,6 +704,17 @@ final class _QualityAstVisitor extends RecursiveAstVisitor<void> {
       return true;
     }
     return false;
+  }
+
+  bool _isCompileTimeEnvironmentLookup(MethodInvocation node) {
+    final target = node.target?.toSource();
+    final method = node.methodName.name;
+    return (target == 'String' || target == 'int' || target == 'bool') && method == 'fromEnvironment';
+  }
+
+  bool _isNetworkLiteral(String? value) {
+    if (value == null) return false;
+    return value.startsWith('http://') || value.startsWith('https://');
   }
 
   static const _navigatorScreenMethods = {

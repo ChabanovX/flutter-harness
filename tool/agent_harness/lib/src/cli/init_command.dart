@@ -16,7 +16,8 @@ final class InitCommand extends Command<int> {
   }
 
   @override
-  String get description => 'Create shared result/failure, design, l10n, logging, and architecture primitives.';
+  String get description =>
+      'Create shared result/failure, constants, design, l10n, logging, and architecture primitives.';
 
   @override
   String get name => 'init';
@@ -33,6 +34,7 @@ final class InitCommand extends Command<int> {
       project.coreRoot,
       'errors/failure_mapper.dart',
     );
+    final constantsRoot = p.posix.join(project.coreRoot, 'constants');
     final designRoot = p.posix.join(project.coreRoot, 'design_system');
     final tokensRoot = p.posix.join(designRoot, 'tokens');
     final loggingPath = p.posix.join(
@@ -54,6 +56,8 @@ final class InitCommand extends Command<int> {
         '{{failure_import}}',
         failureImport,
       ),
+      p.posix.join(constantsRoot, 'ui_constants.dart'): _uiConstantsTemplate,
+      p.posix.join(constantsRoot, 'network_constants.dart'): _networkConstantsTemplate,
       p.posix.join(designRoot, 'app_theme.dart'): _appThemeTemplate,
       p.posix.join(tokensRoot, 'app_colors.dart'): _appColorsTemplate,
       p.posix.join(tokensRoot, 'app_spacing.dart'): _appSpacingTemplate,
@@ -95,6 +99,7 @@ final class InitCommand extends Command<int> {
       p.posix.join(project.appRoot, 'bootstrap'),
       p.posix.join(project.appRoot, 'router'),
       p.posix.join(project.coreRoot, 'analytics'),
+      p.posix.join(project.coreRoot, 'constants'),
       p.posix.join(project.coreRoot, 'design_system'),
       p.posix.join(project.coreRoot, 'l10n'),
       p.posix.join(project.coreRoot, 'logging'),
@@ -265,6 +270,69 @@ final class DefaultFailureMapper implements FailureMapper {
 }
 ''';
 
+const _uiConstantsTemplate = r'''/// Shared UI primitive constants.
+///
+/// Theme extensions compose these values into semantic tokens. Constants that
+/// are only meaningful inside one file should stay private in that file.
+library;
+
+const int kColorPrimaryLightValue = 0xFF1C6E5C;
+const int kColorOnPrimaryLightValue = 0xFFFFFFFF;
+const int kColorBackgroundLightValue = 0xFFF8FAF9;
+const int kColorSurfaceLightValue = 0xFFFFFFFF;
+const int kColorOnSurfaceLightValue = 0xFF18201D;
+const int kColorMutedLightValue = 0xFF66736F;
+const int kColorDangerLightValue = 0xFFB3261E;
+
+const double kSpacingXs = 4;
+const double kSpacingSm = 8;
+const double kSpacingMd = 16;
+const double kSpacingLg = 24;
+const double kSpacingXl = 32;
+
+const double kFontSizeTitle = 22;
+const double kFontSizeBody = 16;
+const double kFontSizeLabel = 14;
+
+const double kRadiusSm = 4;
+const double kRadiusMd = 8;
+const double kRadiusLg = 12;
+
+const double kIconSize = 24;
+const double kControlHeight = 48;
+const double kMaxContentWidth = 720;
+
+const int kShadowLevel1ColorValue = 0x1F000000;
+const double kShadowLevel1BlurRadius = 16;
+const double kShadowLevel1OffsetX = 0;
+const double kShadowLevel1OffsetY = 8;
+
+const Duration kAnimationFast = Duration(milliseconds: 120);
+const Duration kAnimationNormal = Duration(milliseconds: 220);
+const Duration kAnimationSlow = Duration(milliseconds: 360);
+''';
+
+const _networkConstantsTemplate = r'''/// Shared network configuration constants.
+///
+/// Keep endpoints, build-time network configuration, timeouts, and retry
+/// policy here. Per-file implementation details should stay private next to
+/// the code that uses them.
+library;
+
+const String kApiBaseUrl = String.fromEnvironment(
+  'API_BASE_URL',
+);
+
+const Duration kNetworkConnectTimeout = Duration(seconds: 10);
+const Duration kNetworkReceiveTimeout = Duration(seconds: 12);
+const Duration kNetworkSendTimeout = Duration(seconds: 10);
+
+const int kNetworkMaxRetries = 1;
+const double kNetworkRetryMultiplier = 2;
+const Duration kNetworkRetryBaseDelay = Duration(seconds: 1);
+const Duration kNetworkRetryMaxDelay = Duration(seconds: 30);
+''';
+
 const _appThemeTemplate = r'''import 'package:flutter/material.dart';
 
 import 'tokens/tokens.dart';
@@ -291,6 +359,8 @@ abstract final class AppTheme {
 
 const _appColorsTemplate = r'''import 'package:flutter/material.dart';
 
+import '../../constants/ui_constants.dart';
+
 @immutable
 final class AppColors extends ThemeExtension<AppColors> {
   const AppColors({
@@ -312,13 +382,13 @@ final class AppColors extends ThemeExtension<AppColors> {
   final Color danger;
 
   static const light = AppColors(
-    primary: Color(0xFF1C6E5C),
-    onPrimary: Color(0xFFFFFFFF),
-    background: Color(0xFFF8FAF9),
-    surface: Color(0xFFFFFFFF),
-    onSurface: Color(0xFF18201D),
-    muted: Color(0xFF66736F),
-    danger: Color(0xFFB3261E),
+    primary: Color(kColorPrimaryLightValue),
+    onPrimary: Color(kColorOnPrimaryLightValue),
+    background: Color(kColorBackgroundLightValue),
+    surface: Color(kColorSurfaceLightValue),
+    onSurface: Color(kColorOnSurfaceLightValue),
+    muted: Color(kColorMutedLightValue),
+    danger: Color(kColorDangerLightValue),
   );
 
   @override
@@ -360,6 +430,8 @@ final class AppColors extends ThemeExtension<AppColors> {
 
 const _appSpacingTemplate = r'''import 'package:flutter/material.dart';
 
+import '../../constants/ui_constants.dart';
+
 @immutable
 final class AppSpacing extends ThemeExtension<AppSpacing> {
   const AppSpacing({
@@ -384,11 +456,11 @@ final class AppSpacing extends ThemeExtension<AppSpacing> {
   );
 
   static const regular = AppSpacing(
-    xs: 4,
-    sm: 8,
-    md: 16,
-    lg: 24,
-    xl: 32,
+    xs: kSpacingXs,
+    sm: kSpacingSm,
+    md: kSpacingMd,
+    lg: kSpacingLg,
+    xl: kSpacingXl,
   );
 
   @override
@@ -426,6 +498,8 @@ double _lerp(double begin, double end, double t) => begin + (end - begin) * t;
 
 const _appTypographyTemplate = r'''import 'package:flutter/material.dart';
 
+import '../../constants/ui_constants.dart';
+
 @immutable
 final class AppTypography extends ThemeExtension<AppTypography> {
   const AppTypography({
@@ -440,15 +514,15 @@ final class AppTypography extends ThemeExtension<AppTypography> {
 
   static const regular = AppTypography(
     title: TextStyle(
-      fontSize: 22,
+      fontSize: kFontSizeTitle,
       fontWeight: FontWeight.w600,
     ),
     body: TextStyle(
-      fontSize: 16,
+      fontSize: kFontSizeBody,
       fontWeight: FontWeight.w400,
     ),
     label: TextStyle(
-      fontSize: 14,
+      fontSize: kFontSizeLabel,
       fontWeight: FontWeight.w600,
     ),
   );
@@ -480,6 +554,8 @@ final class AppTypography extends ThemeExtension<AppTypography> {
 
 const _appRadiusTemplate = r'''import 'package:flutter/material.dart';
 
+import '../../constants/ui_constants.dart';
+
 @immutable
 final class AppRadius extends ThemeExtension<AppRadius> {
   const AppRadius({
@@ -493,9 +569,9 @@ final class AppRadius extends ThemeExtension<AppRadius> {
   final BorderRadius lg;
 
   static const regular = AppRadius(
-    sm: BorderRadius.all(Radius.circular(4)),
-    md: BorderRadius.all(Radius.circular(8)),
-    lg: BorderRadius.all(Radius.circular(12)),
+    sm: BorderRadius.all(Radius.circular(kRadiusSm)),
+    md: BorderRadius.all(Radius.circular(kRadiusMd)),
+    lg: BorderRadius.all(Radius.circular(kRadiusLg)),
   );
 
   @override
@@ -525,6 +601,8 @@ final class AppRadius extends ThemeExtension<AppRadius> {
 
 const _appSizesTemplate = r'''import 'package:flutter/material.dart';
 
+import '../../constants/ui_constants.dart';
+
 @immutable
 final class AppSizes extends ThemeExtension<AppSizes> {
   const AppSizes({
@@ -538,9 +616,9 @@ final class AppSizes extends ThemeExtension<AppSizes> {
   final double maxContentWidth;
 
   static const regular = AppSizes(
-    icon: 24,
-    controlHeight: 48,
-    maxContentWidth: 720,
+    icon: kIconSize,
+    controlHeight: kControlHeight,
+    maxContentWidth: kMaxContentWidth,
   );
 
   @override
@@ -572,6 +650,8 @@ double _lerp(double begin, double end, double t) => begin + (end - begin) * t;
 
 const _appShadowsTemplate = r'''import 'package:flutter/material.dart';
 
+import '../../constants/ui_constants.dart';
+
 @immutable
 final class AppShadows extends ThemeExtension<AppShadows> {
   const AppShadows({
@@ -583,9 +663,9 @@ final class AppShadows extends ThemeExtension<AppShadows> {
   static const regular = AppShadows(
     level1: [
       BoxShadow(
-        blurRadius: 16,
-        color: Color(0x1F000000),
-        offset: Offset(0, 8),
+        blurRadius: kShadowLevel1BlurRadius,
+        color: Color(kShadowLevel1ColorValue),
+        offset: Offset(kShadowLevel1OffsetX, kShadowLevel1OffsetY),
       ),
     ],
   );
@@ -611,6 +691,8 @@ final class AppShadows extends ThemeExtension<AppShadows> {
 
 const _appAnimationsTemplate = r'''import 'package:flutter/material.dart';
 
+import '../../constants/ui_constants.dart';
+
 @immutable
 final class AppAnimations extends ThemeExtension<AppAnimations> {
   const AppAnimations({
@@ -624,9 +706,9 @@ final class AppAnimations extends ThemeExtension<AppAnimations> {
   final Duration slow;
 
   static const regular = AppAnimations(
-    fast: Duration(milliseconds: 120),
-    normal: Duration(milliseconds: 220),
-    slow: Duration(milliseconds: 360),
+    fast: kAnimationFast,
+    normal: kAnimationNormal,
+    slow: kAnimationSlow,
   );
 
   @override

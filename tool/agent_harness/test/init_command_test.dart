@@ -23,6 +23,20 @@ void main() {
       ).existsSync(),
       isTrue,
     );
+    expect(
+      File(p.join(project.root.path, 'lib/core/constants/ui_constants.dart')).existsSync(),
+      isTrue,
+    );
+    expect(
+      File(p.join(project.root.path, 'lib/core/constants/network_constants.dart')).existsSync(),
+      isTrue,
+    );
+    expect(
+      File(
+        p.join(project.root.path, 'lib/core/design_system/tokens/app_spacing.dart'),
+      ).readAsStringSync(),
+      contains("import '../../constants/ui_constants.dart';"),
+    );
     expect(File(p.join(project.root.path, 'l10n.yaml')).existsSync(), isTrue);
     expect(
       File(p.join(project.root.path, 'lib/l10n/app_en.arb')).existsSync(),

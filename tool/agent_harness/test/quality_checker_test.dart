@@ -252,6 +252,61 @@ Widget buildHost() {
       );
     });
 
+    test('reports shared public constants and inline network endpoints outside core constants', () {
+      final project = TestProject.create();
+      addTearDown(project.dispose);
+      project.write(
+        'lib/features/catalog/application/catalog_config.dart',
+        '''const kCatalogPageSize = 20;
+const _apiBaseUrl = String.fromEnvironment('API_BASE_URL');
+''',
+      );
+      project.write(
+        'lib/features/catalog/data/catalog_api.dart',
+        '''const apiBaseUrl = 'https://api.example.com/v1';
+''',
+      );
+
+      final report = QualityChecker(HarnessConfig.load(project.root)).check();
+      final rules = report.violations.map((item) => item.rule).toSet();
+
+      expect(rules, contains('shared_constant_location'));
+      expect(rules, contains('network_constant_location'));
+    });
+
+    test('allows core constants and private file-local constants', () {
+      final project = TestProject.create();
+      addTearDown(project.dispose);
+      project
+        ..write(
+          'lib/core/constants/ui_constants.dart',
+          '''const double kSpacingSm = 8;
+''',
+        )
+        ..write(
+          'lib/core/constants/network_constants.dart',
+          '''const String kApiBaseUrl = String.fromEnvironment(
+  'API_BASE_URL',
+  defaultValue: 'https://api.example.com',
+);
+''',
+        )
+        ..write(
+          'lib/features/catalog/application/catalog_config.dart',
+          '''const _pageSize = 20;
+''',
+        );
+
+      final report = QualityChecker(HarnessConfig.load(project.root)).check();
+
+      expect(
+        report.violations.where(
+          (item) => item.rule == 'shared_constant_location' || item.rule == 'network_constant_location',
+        ),
+        isEmpty,
+      );
+    });
+
     test('does not apply widget l10n or design checks to Cubit tests', () {
       final project = TestProject.create();
       addTearDown(project.dispose);
