@@ -168,8 +168,6 @@ final class QualityChecker {
     }
 
     final appRoot = config.project.appRoot;
-    if (relativePath == '$appRoot/app.dart') return true;
-
     return relativePath.startsWith('$appRoot/router/') ||
         relativePath.startsWith('$appRoot/bootstrap/') ||
         relativePath.startsWith('$appRoot/di/');

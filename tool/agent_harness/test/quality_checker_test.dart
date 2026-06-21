@@ -190,6 +190,30 @@ Widget buildCatalog(BuildContext context) {
       expect(rules, contains('imperative_screen_navigation'));
     });
 
+    test('reports imperative screen navigation in app shell outside router', () {
+      final project = TestProject.create();
+      addTearDown(project.dispose);
+      project.write(
+        'lib/app/app.dart',
+        '''import 'package:flutter/material.dart';
+
+Widget buildApp(BuildContext context) {
+  Navigator.of(context).push<void>(
+    MaterialPageRoute<void>(
+      builder: (_) => const SizedBox.shrink(),
+    ),
+  );
+  return const SizedBox.shrink();
+}
+''',
+      );
+
+      final report = QualityChecker(HarnessConfig.load(project.root)).check();
+      final rules = report.violations.map((item) => item.rule).toSet();
+
+      expect(rules, contains('imperative_screen_navigation'));
+    });
+
     test('allows transient pop, router composition, and widget test wrappers', () {
       final project = TestProject.create();
       addTearDown(project.dispose);
