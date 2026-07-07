@@ -1,5 +1,7 @@
 import 'package:agent_harness/src/config/harness_config.dart';
 import 'package:agent_harness/src/quality/quality_checker.dart';
+import 'package:agent_harness/src/scaffold/naming.dart';
+import 'package:agent_harness/src/scaffold/templates.dart';
 import 'package:test/test.dart';
 
 import 'test_project.dart';
@@ -348,5 +350,302 @@ const _apiBaseUrl = String.fromEnvironment('API_BASE_URL');
 
       expect(report.violations, isEmpty);
     });
+
+    test('reports oversized and unsafe state managers', () {
+      final project = TestProject.create(
+        config: '''
+quality:
+  state_manager:
+    max_class_lines: 20
+    max_total_methods: 2
+    max_public_methods: 1
+    max_required_constructor_dependencies: 1
+    max_emit_calls: 1
+    max_copy_with_named_args: 3
+    max_command_named_args: 3
+    max_state_derived_command_args: 2
+''',
+      );
+      addTearDown(project.dispose);
+      project.write(
+        'lib/features/recorder/presentation/cubit/recorder_cubit.dart',
+        '''class Cubit<S> {
+  Cubit(this.state);
+  final S state;
+  bool get isClosed => false;
+  void emit(S state) {}
+}
+
+final class RecorderState {
+  RecorderState copyWith({
+    int? a,
+    int? b,
+    int? c,
+    int? d,
+  }) => this;
+}
+
+final class RecorderCubit extends Cubit<RecorderState> {
+  RecorderCubit({
+    required Object first,
+    required Object second,
+  }) : super(RecorderState());
+
+  bool _operationInFlight = false;
+  bool _previewInFlight = false;
+  final List<String> _undoStack = [];
+  int _manualSequence = 0;
+
+  Future<void> load() async {
+    await fetch();
+    emit(state.copyWith(a: 1, b: 2, c: 3, d: 4));
+  }
+
+  Future<void> exportLastProject() async {
+    await runCommand(
+      a: state.copyWith(),
+      b: state.copyWith(),
+      c: state.copyWith(),
+      d: 4,
+    );
+    if (isClosed) return;
+    emit(state);
+  }
+
+  Future<void> fetch() async {}
+  Future<void> runCommand({Object? a, Object? b, Object? c, Object? d}) async {}
+}
+''',
+      );
+
+      final report = QualityChecker(HarnessConfig.load(project.root)).check();
+      final rules = report.violations.map((item) => item.rule).toSet();
+      final sizeMessage = report.violations.singleWhere((item) => item.rule == 'state_manager_too_large').message;
+      final hiddenMessage = report.violations
+          .singleWhere((item) => item.rule == 'state_manager_hidden_mutable_state')
+          .message;
+
+      expect(rules, contains('state_manager_too_large'));
+      expect(rules, contains('state_manager_hidden_mutable_state'));
+      expect(rules, contains('state_manager_async_policy_missing'));
+      expect(rules, contains('state_manager_command_arg_explosion'));
+      expect(rules, contains('state_manager_copy_with_arg_explosion'));
+      expect(sizeMessage, contains('class lines'));
+      expect(sizeMessage, contains('total methods'));
+      expect(sizeMessage, contains('public methods'));
+      expect(sizeMessage, contains('required constructor dependencies'));
+      expect(sizeMessage, contains('emit calls'));
+      expect(hiddenMessage, contains('_previewInFlight'));
+    });
+
+    test('reports incomplete and too-wide state models', () {
+      final project = TestProject.create(
+        config: '''
+quality:
+  state_manager:
+    max_state_fields: 2
+''',
+      );
+      addTearDown(project.dispose);
+      project.write(
+        'lib/features/catalog/presentation/cubit/catalog_state.dart',
+        '''final class CatalogState {
+  CatalogState({
+    required this.items,
+    this.failure,
+    this.page = 0,
   });
+
+  final List<String> items;
+  final String? failure;
+  final int page;
+  var draft = '';
+
+  CatalogState copyWith({
+    String? failure,
+  }) {
+    return CatalogState(
+      items: items,
+      failure: failure ?? this.failure,
+      page: page,
+    );
+  }
+}
+''',
+      );
+
+      final report = QualityChecker(HarnessConfig.load(project.root)).check();
+      final rules = report.violations.map((item) => item.rule).toSet();
+      final incomplete = report.violations.singleWhere((item) => item.rule == 'state_model_incomplete').message;
+
+      expect(rules, contains('state_model_incomplete'));
+      expect(rules, contains('state_model_too_wide'));
+      expect(incomplete, contains('non-final fields'));
+      expect(incomplete, contains('defensively copied'));
+      expect(incomplete, contains('copyWith is missing'));
+    });
+
+    test('does not lint Flutter widget State classes as state models', () {
+      final project = TestProject.create();
+      addTearDown(project.dispose);
+      project.write(
+        'lib/features/catalog/presentation/pages/catalog_page.dart',
+        '''class StatefulWidget {}
+class State<T> {}
+
+final class CatalogPage extends StatefulWidget {}
+
+final class _CatalogPageState extends State<CatalogPage> {
+  var tabIndex = 0;
+}
+''',
+      );
+
+      final report = QualityChecker(HarnessConfig.load(project.root)).check();
+
+      expect(
+        report.violations.where((item) => item.rule.startsWith('state_')),
+        isEmpty,
+      );
+    });
+
+    test('accepts scaffold-shaped sealed and status Cubits', () {
+      final project = TestProject.create();
+      addTearDown(project.dispose);
+      final sealed = _templates('sealed');
+      final status = _templates('status');
+      project
+        ..write(
+          'lib/features/notifications/presentation/cubit/notifications_state.dart',
+          sealed.state,
+        )
+        ..write(
+          'lib/features/notifications/presentation/cubit/notifications_cubit.dart',
+          sealed.cubit,
+        )
+        ..write(
+          'lib/features/search/presentation/cubit/search_state.dart',
+          status.state,
+        )
+        ..write(
+          'lib/features/search/presentation/cubit/search_cubit.dart',
+          status.cubit,
+        );
+
+      final report = QualityChecker(HarnessConfig.load(project.root)).check();
+
+      expect(
+        report.violations.where((item) => item.rule.startsWith('state_')),
+        isEmpty,
+      );
+    });
+
+    test('can disable state-manager contracts', () {
+      final project = TestProject.create(
+        config: '''
+quality:
+  enforce_state_manager_contracts: false
+  state_manager:
+    max_public_methods: 0
+''',
+      );
+      addTearDown(project.dispose);
+      project.write(
+        'lib/features/catalog/presentation/cubit/catalog_cubit.dart',
+        '''class Cubit<S> {
+  Cubit(this.state);
+  final S state;
+}
+
+final class CatalogState {}
+
+final class CatalogCubit extends Cubit<CatalogState> {
+  CatalogCubit() : super(CatalogState());
+
+  void load() {}
+}
+''',
+      );
+
+      final report = QualityChecker(HarnessConfig.load(project.root)).check();
+
+      expect(
+        report.violations.where((item) => item.rule.startsWith('state_')),
+        isEmpty,
+      );
+    });
+
+    test('requires structured harness suppressions', () {
+      final project = TestProject.create(
+        config: '''
+quality:
+  state_manager:
+    max_public_methods: 0
+''',
+      );
+      addTearDown(project.dispose);
+      project.write(
+        'lib/features/catalog/presentation/cubit/catalog_cubit.dart',
+        '''class Cubit<S> {
+  Cubit(this.state);
+  final S state;
+}
+
+final class CatalogState {}
+
+// harness-ignore-next-line state_manager_too_large: reason=legacy shim; owner=platform; expires=2999-01-01
+final class SuppressedCubit extends Cubit<CatalogState> {
+  SuppressedCubit() : super(CatalogState());
+
+  void load() {}
+}
+
+// harness-ignore-next-line state_manager_too_large: reason=legacy shim
+final class InvalidSuppressionCubit extends Cubit<CatalogState> {
+  InvalidSuppressionCubit() : super(CatalogState());
+
+  void load() {}
+}
+
+// ignore: state_manager_too_large
+final class PlainIgnoreCubit extends Cubit<CatalogState> {
+  PlainIgnoreCubit() : super(CatalogState());
+
+  void load() {}
+}
+''',
+      );
+
+      final report = QualityChecker(HarnessConfig.load(project.root)).check();
+      final tooLargeAnchors = report.violations
+          .where((item) => item.rule == 'state_manager_too_large')
+          .map((item) => item.anchor)
+          .toSet();
+
+      expect(tooLargeAnchors, isNot(contains('SuppressedCubit')));
+      expect(tooLargeAnchors, contains('InvalidSuppressionCubit'));
+      expect(tooLargeAnchors, contains('PlainIgnoreCubit'));
+      expect(
+        report.violations.map((item) => item.rule),
+        contains('invalid_harness_suppression'),
+      );
+    });
+  });
+}
+
+FeatureTemplates _templates(String stateStyle) {
+  return FeatureTemplates(
+    packageName: 'demo_app',
+    naming: FeatureNaming(
+      feature: stateStyle == 'sealed' ? 'notifications' : 'search',
+      entity: stateStyle == 'sealed' ? 'notification' : 'search_result',
+    ),
+    stateStyle: stateStyle,
+    featurePackageRoot: stateStyle == 'sealed' ? 'features/notifications' : 'features/search',
+    sharedDomainPackageRoot: 'shared/domain',
+    failureMapperPackagePath: 'core/errors/failure_mapper.dart',
+    designTokensPackagePath: 'core/design_system/tokens/tokens.dart',
+    localizationsPackagePath: 'core/l10n/app_localizations.dart',
+    localizationsClass: 'AppLocalizations',
+  );
 }

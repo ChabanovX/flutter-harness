@@ -39,6 +39,7 @@ final class HarnessConfig {
     final projectMap = _asMap(map['project']);
     final architectureMap = _asMap(map['architecture']);
     final qualityMap = _asMap(map['quality']);
+    final stateManagerMap = _asMap(qualityMap['state_manager']);
     final goldenMap = _asMap(map['golden']);
     final verificationMap = _asMap(map['verification']);
     final scaffoldingMap = _asMap(map['scaffolding']);
@@ -173,6 +174,10 @@ final class HarnessConfig {
           qualityMap['enforce_logging'],
           fallback: true,
         ),
+        enforceStateManagerContracts: _boolean(
+          qualityMap['enforce_state_manager_contracts'],
+          fallback: true,
+        ),
         designTokensPath: _normalizedPath(
           _string(
             qualityMap['design_tokens_path'],
@@ -193,6 +198,44 @@ final class HarnessConfig {
         loggingFacadeClass: _string(
           qualityMap['logging_facade_class'],
           fallback: 'AppLogger',
+        ),
+        stateManager: StateManagerQualityConfig(
+          maxClassLines: _integer(
+            stateManagerMap['max_class_lines'],
+            fallback: 700,
+          ),
+          maxTotalMethods: _integer(
+            stateManagerMap['max_total_methods'],
+            fallback: 40,
+          ),
+          maxPublicMethods: _integer(
+            stateManagerMap['max_public_methods'],
+            fallback: 20,
+          ),
+          maxRequiredConstructorDependencies: _integer(
+            stateManagerMap['max_required_constructor_dependencies'],
+            fallback: 8,
+          ),
+          maxEmitCalls: _integer(
+            stateManagerMap['max_emit_calls'],
+            fallback: 40,
+          ),
+          maxCopyWithNamedArgs: _integer(
+            stateManagerMap['max_copy_with_named_args'],
+            fallback: 12,
+          ),
+          maxCommandNamedArgs: _integer(
+            stateManagerMap['max_command_named_args'],
+            fallback: 8,
+          ),
+          maxStateDerivedCommandArgs: _integer(
+            stateManagerMap['max_state_derived_command_args'],
+            fallback: 6,
+          ),
+          maxStateFields: _integer(
+            stateManagerMap['max_state_fields'],
+            fallback: 40,
+          ),
         ),
       ),
       golden: GoldenConfig(
@@ -376,20 +419,48 @@ final class QualityConfig {
     required this.enforceLocalization,
     required this.enforceAssets,
     required this.enforceLogging,
+    required this.enforceStateManagerContracts,
     required this.designTokensPath,
     required this.localizationsClass,
     required this.assetsClass,
     required this.loggingFacadeClass,
+    required this.stateManager,
   });
 
   final bool enforceDesignTokens;
   final bool enforceLocalization;
   final bool enforceAssets;
   final bool enforceLogging;
+  final bool enforceStateManagerContracts;
   final String designTokensPath;
   final String localizationsClass;
   final String assetsClass;
   final String loggingFacadeClass;
+  final StateManagerQualityConfig stateManager;
+}
+
+final class StateManagerQualityConfig {
+  const StateManagerQualityConfig({
+    required this.maxClassLines,
+    required this.maxTotalMethods,
+    required this.maxPublicMethods,
+    required this.maxRequiredConstructorDependencies,
+    required this.maxEmitCalls,
+    required this.maxCopyWithNamedArgs,
+    required this.maxCommandNamedArgs,
+    required this.maxStateDerivedCommandArgs,
+    required this.maxStateFields,
+  });
+
+  final int maxClassLines;
+  final int maxTotalMethods;
+  final int maxPublicMethods;
+  final int maxRequiredConstructorDependencies;
+  final int maxEmitCalls;
+  final int maxCopyWithNamedArgs;
+  final int maxCommandNamedArgs;
+  final int maxStateDerivedCommandArgs;
+  final int maxStateFields;
 }
 
 final class GoldenConfig {
@@ -457,6 +528,13 @@ bool _boolean(Object? value, {required bool fallback}) {
     if (value.toLowerCase() == 'true') return true;
     if (value.toLowerCase() == 'false') return false;
   }
+  return fallback;
+}
+
+int _integer(Object? value, {required int fallback}) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value.trim()) ?? fallback;
   return fallback;
 }
 

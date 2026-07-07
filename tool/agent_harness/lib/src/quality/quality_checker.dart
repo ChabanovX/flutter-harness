@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 
 import '../config/harness_config.dart';
 import '../util/files.dart';
+import 'state_manager_quality_checker.dart';
 
 final class QualityChecker {
   QualityChecker(this.config)
@@ -47,6 +48,7 @@ final class QualityChecker {
         basename.endsWith('.freezed.dart') ||
         basename.endsWith('.mocks.dart') ||
         basename.endsWith('.gr.dart') ||
+        basename.endsWith('.config.dart') ||
         relativePath == config.quality.designTokensPath ||
         relativePath.startsWith('${config.project.coreRoot}/l10n/');
   }
@@ -63,13 +65,15 @@ final class QualityChecker {
     final enforceLogging = config.quality.enforceLogging && !_isLoggingFacadePath(relativePath);
     final enforceNavigation = uiPath && !_isNavigationCompositionPath(relativePath);
     final enforceConstants = _isLibPath(relativePath) && !_isSharedConstantsPath(relativePath);
+    final enforceStateManagers = config.quality.enforceStateManagerContracts && _isPresentationSourcePath(relativePath);
 
     if (!enforceDesign &&
         !enforceLocalization &&
         !enforceAssets &&
         !enforceLogging &&
         !enforceNavigation &&
-        !enforceConstants) {
+        !enforceConstants &&
+        !enforceStateManagers) {
       return;
     }
 
@@ -109,6 +113,31 @@ final class QualityChecker {
         lineForOffset: (offset) => result.lineInfo.getLocation(offset).lineNumber,
         violations: violations,
       );
+    }
+    if (enforceStateManagers) {
+      StateManagerQualityChecker(
+        config: config,
+        relativePath: relativePath,
+        content: content,
+        unit: result.unit,
+        lineForOffset: (offset) => result.lineInfo.getLocation(offset).lineNumber,
+        addViolation:
+            ({
+              required rule,
+              required line,
+              required message,
+              required anchor,
+            }) => _add(
+              violations,
+              QualityViolation(
+                rule: rule,
+                path: relativePath,
+                line: line,
+                message: message,
+                anchor: anchor,
+              ),
+            ),
+      ).check();
     }
 
     final developerImport = _DeveloperImport.from(result.unit.directives);
@@ -186,6 +215,11 @@ final class QualityChecker {
         segments[1] == 'presentation' &&
         segments[2] == 'pages' &&
         segments.last.endsWith('_page.dart');
+  }
+
+  bool _isPresentationSourcePath(String relativePath) {
+    if (!_isLibPath(relativePath)) return false;
+    return p.posix.split(relativePath).contains('presentation');
   }
 
   void _checkPagePrivateHelpers({

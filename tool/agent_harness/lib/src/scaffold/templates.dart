@@ -341,7 +341,8 @@ final class ${naming.featurePascal}Empty extends ${naming.featurePascal}State {
 }
 
 final class ${naming.featurePascal}Loaded extends ${naming.featurePascal}State {
-  const ${naming.featurePascal}Loaded(this.items);
+  ${naming.featurePascal}Loaded(List<${naming.entityPascal}> items)
+    : items = List.unmodifiable(items);
 
   final List<${naming.entityPascal}> items;
 }
@@ -458,11 +459,11 @@ enum ${naming.featurePascal}Status {
 }
 
 final class ${naming.featurePascal}State {
-  const ${naming.featurePascal}State({
+  ${naming.featurePascal}State({
     this.status = ${naming.featurePascal}Status.initial,
-    this.items = const [],
     this.failure,
-  });
+    List<${naming.entityPascal}> items = const [],
+  }) : items = List.unmodifiable(items);
 
   final ${naming.featurePascal}Status status;
   final List<${naming.entityPascal}> items;
@@ -492,7 +493,7 @@ final class ${naming.featurePascal}Cubit extends Cubit<${naming.featurePascal}St
   ${naming.featurePascal}Cubit({
     required Get${naming.featurePascal} get${naming.featurePascal},
   })  : _get${naming.featurePascal} = get${naming.featurePascal},
-        super(const ${naming.featurePascal}State());
+       super(${naming.featurePascal}State());
 
   final Get${naming.featurePascal} _get${naming.featurePascal};
   bool _loading = false;
