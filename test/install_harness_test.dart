@@ -59,13 +59,20 @@ formatter:
 
   test('rewrites AGENTS documentation paths to the submodule', () {
     final rendered = installer.renderAgentInstructions(
-      'Read `docs/architecture/overview.md` first.',
+      'Read `docs/architecture/overview.md` and '
+      '`docs/architecture/commenting.md` first.',
       installer.defaultSubmodulePath,
     );
 
     expect(
       rendered,
       contains('`tool/flutter_agentic_harness/docs/architecture/overview.md`'),
+    );
+    expect(
+      rendered,
+      contains(
+        '`tool/flutter_agentic_harness/docs/architecture/commenting.md`',
+      ),
     );
   });
 

@@ -450,8 +450,16 @@ Future<void> main(List<String> arguments) async {
 }
 
 String renderAgentInstructions(String source, String submodulePath) {
-  final docsPath = '${_toPosix(submodulePath)}/docs/architecture/overview.md';
-  return source.replaceAll('docs/architecture/overview.md', docsPath);
+  final path = _toPosix(submodulePath);
+  return source
+      .replaceAll(
+        'docs/architecture/overview.md',
+        '$path/docs/architecture/overview.md',
+      )
+      .replaceAll(
+        'docs/architecture/commenting.md',
+        '$path/docs/architecture/commenting.md',
+      );
 }
 
 String renderAnalysisOptions(String submodulePath) {

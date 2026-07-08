@@ -3,6 +3,8 @@
 ## Before editing
 
 1. Read `docs/architecture/overview.md` and the nearest feature's tests.
+   When adding or changing comments, Dartdoc, TODOs, lint suppressions, or
+   localization metadata, also read `docs/architecture/commenting.md`.
 2. Inspect an existing feature with the same state and data-flow shape.
 3. Define the behavioral acceptance criteria, including loading, empty, failure, retry, and offline behavior where applicable.
 4. Keep the change inside one vertical slice unless the task explicitly changes a shared contract.
@@ -37,6 +39,8 @@
 
 ## Commenting conventions
 
+- Full rules live in `docs/architecture/commenting.md`; they are review-enforced
+  conventions, not static lint checks.
 - Comment invariants, policies, architecture exceptions, cache/offline behavior, async concurrency, race guards, platform workarounds, and non-obvious fallbacks.
 - Prefer comments that explain why code is shaped this way, what can break, and what contract must be preserved.
 - Use `///` for public contracts and state/API semantics; use `//` for local implementation rationale.
