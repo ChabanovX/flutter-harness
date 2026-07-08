@@ -87,6 +87,7 @@ quality:
   enforce_assets: true
   enforce_logging: true
   design_tokens_path: lib/core/design_system/tokens/tokens.dart
+  ui_constants_path: lib/core/constants/ui_constants.dart
   localizations_class: AppLocalizations
   assets_class: Assets
   logging_facade_class: AppLogger

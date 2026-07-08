@@ -29,6 +29,7 @@ void main() {
       config.quality.designTokensPath,
       'lib/core/design_system/tokens/tokens.dart',
     );
+    expect(config.quality.uiConstantsPath, 'lib/core/constants/ui_constants.dart');
     expect(config.quality.localizationsClass, 'AppLocalizations');
     expect(config.quality.assetsClass, 'Assets');
     expect(config.quality.loggingFacadeClass, 'AppLogger');
@@ -85,6 +86,7 @@ architecture:
   enforce_logging: false
   enforce_state_manager_contracts: false
   design_tokens_path: lib/ui/tokens.dart
+  ui_constants_path: lib/ui/ui_constants.dart
   localizations_class: RivaLocalizations
   assets_class: RivaAssets
   logging_facade_class: RivaLogger
@@ -113,6 +115,7 @@ golden:
     expect(config.quality.enforceLogging, isFalse);
     expect(config.quality.enforceStateManagerContracts, isFalse);
     expect(config.quality.designTokensPath, 'lib/ui/tokens.dart');
+    expect(config.quality.uiConstantsPath, 'lib/ui/ui_constants.dart');
     expect(config.quality.localizationsClass, 'RivaLocalizations');
     expect(config.quality.assetsClass, 'RivaAssets');
     expect(config.quality.loggingFacadeClass, 'RivaLogger');

@@ -187,6 +187,15 @@ final class HarnessConfig {
             ),
           ),
         ),
+        uiConstantsPath: _normalizedPath(
+          _string(
+            qualityMap['ui_constants_path'],
+            fallback: p.posix.join(
+              project.coreRoot,
+              'constants/ui_constants.dart',
+            ),
+          ),
+        ),
         localizationsClass: _string(
           qualityMap['localizations_class'],
           fallback: 'AppLocalizations',
@@ -421,6 +430,7 @@ final class QualityConfig {
     required this.enforceLogging,
     required this.enforceStateManagerContracts,
     required this.designTokensPath,
+    required this.uiConstantsPath,
     required this.localizationsClass,
     required this.assetsClass,
     required this.loggingFacadeClass,
@@ -433,6 +443,7 @@ final class QualityConfig {
   final bool enforceLogging;
   final bool enforceStateManagerContracts;
   final String designTokensPath;
+  final String uiConstantsPath;
   final String localizationsClass;
   final String assetsClass;
   final String loggingFacadeClass;

@@ -51,6 +51,30 @@ Widget buildCatalog(BuildContext context) {
       expect(rules, contains('hardcoded_ui_string'));
     });
 
+    test('reports hardcoded visual numeric named arguments', () {
+      final project = TestProject.create();
+      addTearDown(project.dispose);
+      project.write(
+        'lib/features/catalog/presentation/catalog_page.dart',
+        '''import 'package:flutter/material.dart';
+
+Widget buildCatalog(BuildContext context) {
+  return const Icon(
+    Icons.add,
+    size: 24,
+  );
+}
+''',
+      );
+
+      final report = QualityChecker(HarnessConfig.load(project.root)).check();
+
+      expect(
+        report.violations.where((item) => item.rule == 'raw_design_value'),
+        isNotEmpty,
+      );
+    });
+
     test('reports asset literals and forbidden logging calls', () {
       final project = TestProject.create();
       addTearDown(project.dispose);
@@ -141,6 +165,149 @@ Widget buildCatalog(BuildContext context) {
       final rules = report.violations.map((item) => item.rule).toSet();
 
       expect(rules, contains('theme_extension_fallback'));
+    });
+
+    test('reports theme extension values that bypass ui constants', () {
+      final project = TestProject.create();
+      addTearDown(project.dispose);
+      project.write(
+        'lib/core/design_system/tokens/app_spacing.dart',
+        '''import 'package:flutter/material.dart';
+
+const _localSpacing = 12;
+
+@immutable
+final class AppSpacing extends ThemeExtension<AppSpacing> {
+  const AppSpacing({
+    required this.md,
+    required this.lg,
+  });
+
+  final double md;
+  final double lg;
+
+  static const regular = AppSpacing(
+    md: 16,
+    lg: _localSpacing,
+  );
+
+  @override
+  AppSpacing copyWith({
+    double? md,
+    double? lg,
+  }) {
+    return this;
+  }
+
+  @override
+  AppSpacing lerp(ThemeExtension<AppSpacing>? other, double t) {
+    return this;
+  }
+}
+''',
+      );
+
+      final report = QualityChecker(HarnessConfig.load(project.root)).check();
+
+      expect(
+        report.violations.where((item) => item.rule == 'theme_token_source'),
+        isNotEmpty,
+      );
+    });
+
+    test('allows theme extension values from ui constants', () {
+      final project = TestProject.create();
+      addTearDown(project.dispose);
+      project
+        ..write(
+          'lib/core/constants/ui_constants.dart',
+          '''const int kColorPrimaryLightValue = 0xFF1C6E5C;
+const double kSpacingMd = 16;
+const double kSpacingLg = 24;
+const double kRadiusMd = 8;
+const double kFontSizeTitle = 22;
+const double kShadowLevel1BlurRadius = 16;
+const int kShadowLevel1ColorValue = 0x1F000000;
+const double kShadowLevel1OffsetX = 0;
+const double kShadowLevel1OffsetY = 8;
+const Duration kAnimationFast = Duration(milliseconds: 120);
+''',
+        )
+        ..write(
+          'lib/core/design_system/tokens/app_tokens.dart',
+          '''import 'package:flutter/material.dart';
+
+import '../../constants/ui_constants.dart';
+
+@immutable
+final class AppTokens extends ThemeExtension<AppTokens> {
+  const AppTokens({
+    required this.primary,
+    required this.spacing,
+    required this.radius,
+    required this.title,
+    required this.shadow,
+    required this.fast,
+  });
+
+  final Color primary;
+  final EdgeInsets spacing;
+  final BorderRadius radius;
+  final TextStyle title;
+  final List<BoxShadow> shadow;
+  final Duration fast;
+
+  static const regular = AppTokens(
+    primary: Color(kColorPrimaryLightValue),
+    spacing: EdgeInsets.symmetric(
+      horizontal: kSpacingLg,
+      vertical: kSpacingMd,
+    ),
+    radius: BorderRadius.all(Radius.circular(kRadiusMd)),
+    title: TextStyle(
+      fontSize: kFontSizeTitle,
+      fontWeight: FontWeight.w600,
+    ),
+    shadow: [
+      BoxShadow(
+        blurRadius: kShadowLevel1BlurRadius,
+        color: Color(kShadowLevel1ColorValue),
+        offset: Offset(kShadowLevel1OffsetX, kShadowLevel1OffsetY),
+      ),
+    ],
+    fast: kAnimationFast,
+  );
+
+  @override
+  AppTokens copyWith({
+    Color? primary,
+    EdgeInsets? spacing,
+    BorderRadius? radius,
+    TextStyle? title,
+    List<BoxShadow>? shadow,
+    Duration? fast,
+  }) {
+    return this;
+  }
+
+  @override
+  AppTokens lerp(ThemeExtension<AppTokens>? other, double t) {
+    return this;
+  }
+}
+''',
+        );
+
+      final report = QualityChecker(HarnessConfig.load(project.root)).check();
+      final tokenViolations = report.violations
+          .where((item) => item.rule == 'theme_token_source')
+          .toList(growable: false);
+
+      expect(
+        tokenViolations,
+        isEmpty,
+        reason: tokenViolations.map((item) => '${item.path}:${item.line} ${item.message}').join('\n'),
+      );
     });
 
     test('reports private helpers in feature page files', () {

@@ -22,6 +22,7 @@ final class QualityChecker {
 
   QualityReport check() {
     final violations = <QualityViolation>[];
+    final uiConstantNames = _readUiConstantNames();
     final roots = [
       config.project.libRoot,
       'test',
@@ -33,12 +34,33 @@ final class QualityChecker {
       for (final file in dartFilesUnder(directory)) {
         final relativePath = relativePosix(file.path, from: config.root.path);
         if (_shouldSkip(relativePath)) continue;
-        _checkFile(file, relativePath, violations);
+        _checkFile(file, relativePath, uiConstantNames, violations);
       }
     }
 
     violations.sort();
     return QualityReport(List.unmodifiable(violations));
+  }
+
+  Set<String> _readUiConstantNames() {
+    final file = File(p.join(config.root.path, config.quality.uiConstantsPath));
+    if (!file.existsSync()) return const {};
+
+    final result = parseString(
+      content: file.readAsStringSync(),
+      path: file.path,
+      featureSet: FeatureSet.latestLanguageVersion(),
+      throwIfDiagnostics: false,
+    );
+    final names = <String>{};
+    for (final declaration in result.unit.declarations.whereType<TopLevelVariableDeclaration>()) {
+      if (!declaration.variables.isConst) continue;
+      for (final variable in declaration.variables.variables) {
+        final name = variable.name.lexeme;
+        if (!name.startsWith('_')) names.add(name);
+      }
+    }
+    return Set.unmodifiable(names);
   }
 
   bool _shouldSkip(String relativePath) {
@@ -56,10 +78,12 @@ final class QualityChecker {
   void _checkFile(
     File file,
     String relativePath,
+    Set<String> uiConstantNames,
     List<QualityViolation> violations,
   ) {
     final uiPath = _isUiPath(relativePath);
     final enforceDesign = config.quality.enforceDesignTokens && uiPath;
+    final enforceThemeTokenSource = config.quality.enforceDesignTokens && _isThemeTokenPath(relativePath);
     final enforceLocalization = config.quality.enforceLocalization && uiPath;
     final enforceAssets = config.quality.enforceAssets;
     final enforceLogging = config.quality.enforceLogging && !_isLoggingFacadePath(relativePath);
@@ -68,6 +92,7 @@ final class QualityChecker {
     final enforceStateManagers = config.quality.enforceStateManagerContracts && _isPresentationSourcePath(relativePath);
 
     if (!enforceDesign &&
+        !enforceThemeTokenSource &&
         !enforceLocalization &&
         !enforceAssets &&
         !enforceLogging &&
@@ -102,6 +127,15 @@ final class QualityChecker {
       _checkPagePrivateHelpers(
         unit: result.unit,
         relativePath: relativePath,
+        lineForOffset: (offset) => result.lineInfo.getLocation(offset).lineNumber,
+        violations: violations,
+      );
+    }
+    if (enforceThemeTokenSource) {
+      _checkThemeTokenSource(
+        unit: result.unit,
+        relativePath: relativePath,
+        uiConstantNames: uiConstantNames,
         lineForOffset: (offset) => result.lineInfo.getLocation(offset).lineNumber,
         violations: violations,
       );
@@ -187,6 +221,12 @@ final class QualityChecker {
     return false;
   }
 
+  bool _isThemeTokenPath(String relativePath) {
+    if (relativePath == config.quality.designTokensPath) return false;
+    final tokenRoot = p.posix.dirname(config.quality.designTokensPath);
+    return relativePath.startsWith('$tokenRoot/') && relativePath.endsWith('.dart');
+  }
+
   bool _isLoggingFacadePath(String relativePath) {
     return relativePath.startsWith('${config.project.coreRoot}/logging/');
   }
@@ -267,6 +307,24 @@ final class QualityChecker {
         );
       }
     }
+  }
+
+  void _checkThemeTokenSource({
+    required CompilationUnit unit,
+    required String relativePath,
+    required Set<String> uiConstantNames,
+    required int Function(int offset) lineForOffset,
+    required List<QualityViolation> violations,
+  }) {
+    unit.accept(
+      _ThemeTokenSourceVisitor(
+        relativePath: relativePath,
+        uiConstantsPath: config.quality.uiConstantsPath,
+        uiConstantNames: uiConstantNames,
+        lineForOffset: lineForOffset,
+        addViolation: (violation) => _add(violations, violation),
+      ),
+    );
   }
 
   void _add(List<QualityViolation> violations, QualityViolation violation) {
@@ -353,6 +411,204 @@ final class _DeveloperImport {
   final Set<String> prefixes;
 }
 
+final class _ThemeTokenSourceVisitor extends RecursiveAstVisitor<void> {
+  _ThemeTokenSourceVisitor({
+    required this.relativePath,
+    required this.uiConstantsPath,
+    required this.uiConstantNames,
+    required this.lineForOffset,
+    required this.addViolation,
+  });
+
+  final String relativePath;
+  final String uiConstantsPath;
+  final Set<String> uiConstantNames;
+  final int Function(int offset) lineForOffset;
+  final void Function(QualityViolation violation) addViolation;
+
+  @override
+  void visitTopLevelVariableDeclaration(TopLevelVariableDeclaration node) {
+    if (!node.variables.isConst) return;
+    for (final variable in node.variables.variables) {
+      _violate(
+        offset: variable.offset,
+        message: 'Move ThemeExtension primitive constants to $uiConstantsPath.',
+        anchor: variable.name.lexeme,
+      );
+    }
+  }
+
+  @override
+  void visitClassDeclaration(ClassDeclaration node) {
+    if (!_extendsThemeExtension(node)) return;
+    final className = node.namePart.typeName.lexeme;
+
+    for (final member in node.body.members.whereType<FieldDeclaration>()) {
+      if (member.staticKeyword == null) continue;
+      for (final variable in member.fields.variables) {
+        final initializer = variable.initializer;
+        if (initializer == null) continue;
+        if (_isThemePresetInitializer(initializer, className)) {
+          initializer.accept(
+            _ThemeTokenInitializerVisitor(
+              relativePath: relativePath,
+              uiConstantsPath: uiConstantsPath,
+              uiConstantNames: uiConstantNames,
+              lineForOffset: lineForOffset,
+              addViolation: addViolation,
+            ),
+          );
+        } else if (member.fields.isConst) {
+          _violate(
+            offset: variable.offset,
+            message: 'Move ThemeExtension primitive constants to $uiConstantsPath.',
+            anchor: variable.name.lexeme,
+          );
+        }
+      }
+    }
+  }
+
+  bool _extendsThemeExtension(ClassDeclaration node) {
+    final superclass = node.extendsClause?.superclass.toSource();
+    return superclass != null && superclass.startsWith('ThemeExtension<');
+  }
+
+  bool _isThemePresetInitializer(Expression initializer, String className) {
+    final source = _normalizedConstructor(initializer.toSource());
+    return source.startsWith('$className(') || source.startsWith('$className.');
+  }
+
+  String _normalizedConstructor(String value) {
+    return value.replaceFirst(RegExp(r'^(?:const|new)\s+'), '');
+  }
+
+  void _violate({
+    required int offset,
+    required String message,
+    required String anchor,
+  }) {
+    addViolation(
+      QualityViolation(
+        rule: 'theme_token_source',
+        path: relativePath,
+        line: lineForOffset(offset),
+        message: message,
+        anchor: anchor,
+      ),
+    );
+  }
+}
+
+final class _ThemeTokenInitializerVisitor extends RecursiveAstVisitor<void> {
+  _ThemeTokenInitializerVisitor({
+    required this.relativePath,
+    required this.uiConstantsPath,
+    required this.uiConstantNames,
+    required this.lineForOffset,
+    required this.addViolation,
+  });
+
+  static const _rawStaticTargets = {
+    'BorderRadius',
+    'Colors',
+    'Duration',
+    'EdgeInsets',
+    'Offset',
+    'Radius',
+  };
+
+  static const _factorySelectors = {
+    'all',
+    'circular',
+    'elliptical',
+    'fromDirection',
+    'fromLTRB',
+    'horizontal',
+    'only',
+    'symmetric',
+    'vertical',
+  };
+
+  final String relativePath;
+  final String uiConstantsPath;
+  final Set<String> uiConstantNames;
+  final int Function(int offset) lineForOffset;
+  final void Function(QualityViolation violation) addViolation;
+
+  @override
+  void visitIntegerLiteral(IntegerLiteral node) {
+    _violateRawLiteral(node.offset, node.toSource());
+    super.visitIntegerLiteral(node);
+  }
+
+  @override
+  void visitDoubleLiteral(DoubleLiteral node) {
+    _violateRawLiteral(node.offset, node.toSource());
+    super.visitDoubleLiteral(node);
+  }
+
+  @override
+  void visitPrefixedIdentifier(PrefixedIdentifier node) {
+    if (node.parent is! ConstructorName &&
+        _rawStaticTargets.contains(node.prefix.name) &&
+        !_factorySelectors.contains(node.identifier.name)) {
+      _violateRawLiteral(node.offset, node.toSource());
+    }
+    super.visitPrefixedIdentifier(node);
+  }
+
+  @override
+  void visitPropertyAccess(PropertyAccess node) {
+    final target = node.target?.toSource();
+    if (target != null && _rawStaticTargets.contains(target)) {
+      _violateRawLiteral(node.offset, node.toSource());
+    }
+    super.visitPropertyAccess(node);
+  }
+
+  @override
+  void visitSimpleIdentifier(SimpleIdentifier node) {
+    final name = node.name;
+    if (_looksLikeSharedConstant(name) && !uiConstantNames.contains(name)) {
+      _violate(
+        offset: node.offset,
+        message: 'ThemeExtension token constants must be declared in $uiConstantsPath.',
+        anchor: name,
+      );
+    }
+    super.visitSimpleIdentifier(node);
+  }
+
+  bool _looksLikeSharedConstant(String name) {
+    return RegExp(r'^k[A-Z]').hasMatch(name);
+  }
+
+  void _violateRawLiteral(int offset, String anchor) {
+    _violate(
+      offset: offset,
+      message: 'ThemeExtension token values must reference constants from $uiConstantsPath instead of raw literals.',
+      anchor: anchor,
+    );
+  }
+
+  void _violate({
+    required int offset,
+    required String message,
+    required String anchor,
+  }) {
+    addViolation(
+      QualityViolation(
+        rule: 'theme_token_source',
+        path: relativePath,
+        line: lineForOffset(offset),
+        message: message,
+        anchor: anchor,
+      ),
+    );
+  }
+}
+
 final class _QualityAstVisitor extends RecursiveAstVisitor<void> {
   _QualityAstVisitor({
     required this.relativePath,
@@ -393,6 +649,34 @@ final class _QualityAstVisitor extends RecursiveAstVisitor<void> {
     'semanticLabel',
     'title',
     'tooltip',
+  };
+
+  static const _visualNumericNamedArguments = {
+    'blurRadius',
+    'collapsedHeight',
+    'crossAxisSpacing',
+    'dimension',
+    'elevation',
+    'endIndent',
+    'expandedHeight',
+    'fontSize',
+    'height',
+    'iconSize',
+    'indent',
+    'mainAxisSpacing',
+    'maxHeight',
+    'maxWidth',
+    'minHeight',
+    'minWidth',
+    'radius',
+    'runSpacing',
+    'size',
+    'spacing',
+    'spreadRadius',
+    'strokeWidth',
+    'thickness',
+    'toolbarHeight',
+    'width',
   };
 
   final String relativePath;
@@ -571,6 +855,17 @@ final class _QualityAstVisitor extends RecursiveAstVisitor<void> {
         anchor: node.name.lexeme,
       );
     }
+    if (enforceDesign &&
+        _visualNumericNamedArguments.contains(node.name.lexeme) &&
+        _isNumericLiteral(node.argumentExpression)) {
+      _violate(
+        rule: 'raw_design_value',
+        offset: node.offset,
+        message:
+            'Use ThemeExtension sizing, spacing, radius, typography, or shadow tokens instead of raw visual numbers.',
+        anchor: node.name.lexeme,
+      );
+    }
     super.visitNamedArgument(node);
   }
 
@@ -710,6 +1005,20 @@ final class _QualityAstVisitor extends RecursiveAstVisitor<void> {
   bool _isThemeExtensionLookup(Expression expression) {
     final source = expression.toSource().replaceAll(RegExp(r'\s+'), '');
     return RegExp(r'^Theme\.of\(.+\)\.extension<[^>]+>\(\)$').hasMatch(source);
+  }
+
+  bool _isNumericLiteral(Expression expression) {
+    final value = _unwrapParentheses(expression);
+    if (value is IntegerLiteral || value is DoubleLiteral) return true;
+    return value is PrefixExpression && value.operator.lexeme == '-' && _isNumericLiteral(value.operand);
+  }
+
+  Expression _unwrapParentheses(Expression expression) {
+    var current = expression;
+    while (current is ParenthesizedExpression) {
+      current = current.expression;
+    }
+    return current;
   }
 
   bool _isImperativeRouteConstructor(String className) {
