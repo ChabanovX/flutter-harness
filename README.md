@@ -37,7 +37,7 @@ By default, the installer:
 - writes `AGENTS.md`, `.agent_harness.yaml`, `.agent_harness/baseline.json`, and `analysis_options.yaml`;
 - runs `flutter pub add flutter_bloc get_it logger intl`;
 - runs `flutter pub add flutter_localizations --sdk=flutter`;
-- runs `flutter pub add --dev very_good_analysis:10.2.0 assetify alchemist`.
+- runs `flutter pub add --dev very_good_analysis:10.2.0 assetify alchemist bloc_lint bloc_tools`.
 
 Useful options:
 
@@ -70,7 +70,7 @@ docs/
 tool/
 ```
 
-Generated feature code expects `flutter_bloc`, `flutter_localizations`, `intl`, `logger`, and, when DI module generation is enabled, `get_it` in the application. Merge the relevant entries from `pubspec.harness.snippet.yaml`, including the `very_good_analysis`, `assetify`, and `alchemist` dev dependencies. Use `analysis_options.harness.snippet.yaml` as the application's root analysis options, or merge it into an existing file. The analyzer preset mirrors `fl_init_analyzer`, and still excludes the nested tool package so it is analyzed only in its own package context. Then run:
+Generated feature code expects `flutter_bloc`, `flutter_localizations`, `intl`, `logger`, and, when DI module generation is enabled, `get_it` in the application. Merge the relevant entries from `pubspec.harness.snippet.yaml`, including the `very_good_analysis`, `bloc_lint`, `bloc_tools`, `assetify`, and `alchemist` dev dependencies. Use `analysis_options.harness.snippet.yaml` as the application's root analysis options, or merge it into an existing file. The analyzer preset mirrors `fl_init_analyzer`, adds the official Bloc lint recommended rules, and still excludes the nested tool package so it is analyzed only in its own package context. Then run:
 
 ```bash
 flutter pub get

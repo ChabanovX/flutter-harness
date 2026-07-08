@@ -14,5 +14,7 @@ dependencies:
   yaml: ">=3.1.2 <4.0.0"
 
 dev_dependencies:
+  bloc_lint: any
+  bloc_tools: any
   test: ">=1.25.0 <2.0.0"
   very_good_analysis: 10.2.0

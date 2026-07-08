@@ -109,7 +109,8 @@ verification:
 
   # Commands run after format, analyze, architecture, and tests.
   # Each command is executed from the application root.
-  extra_commands: []
+  extra_commands:
+    - dart run bloc_tools:bloc lint .
   # Example:
   # - dart run build_runner build --delete-conflicting-outputs
   # - git diff --exit-code -- '*.g.dart' '*.freezed.dart'

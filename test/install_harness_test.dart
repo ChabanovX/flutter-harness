@@ -41,7 +41,8 @@ formatter:
     ], workingDirectory: directory.path);
     expect(pubGet.exitCode, 0, reason: pubGet.stderr.toString());
 
-    final toolDirectory = Directory('${directory.path}/tool')..createSync(recursive: true);
+    final toolDirectory = Directory('${directory.path}/tool')
+      ..createSync(recursive: true);
     File('${toolDirectory.path}/harness.dart').writeAsStringSync(
       installer.renderSubmoduleLauncher(installer.defaultSubmodulePath),
     );

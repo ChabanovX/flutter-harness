@@ -24,6 +24,7 @@ void main() {
     final excluded = (analyzer['exclude'] as YamlList).cast<String>();
     final rules = linter['rules'] as YamlMap;
 
+    expect(include, contains('package:bloc_lint/recommended.yaml'));
     expect(include, contains('package:very_good_analysis/analysis_options.yaml'));
     expect(formatter['page_width'], 120);
     expect(formatter['trailing_commas'], 'preserve');

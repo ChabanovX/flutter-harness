@@ -18,4 +18,15 @@ void main() {
       expect(File('tool/agent_harness/pubspec.yaml').existsSync(), isTrue);
     },
   );
+
+  test('app-facing snippets enable official Bloc linting', () {
+    final pubspecSnippet = File(
+      'pubspec.harness.snippet.yaml',
+    ).readAsStringSync();
+    final harnessConfig = File('.agent_harness.yaml').readAsStringSync();
+
+    expect(pubspecSnippet, contains('bloc_lint:'));
+    expect(pubspecSnippet, contains('bloc_tools:'));
+    expect(harnessConfig, contains('dart run bloc_tools:bloc lint .'));
+  });
 }

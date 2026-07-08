@@ -132,7 +132,8 @@ final class HarnessInstaller {
     _validateFlutterProject(projectRoot);
     await _validateGitProject(projectRoot);
 
-    final repositoryUrl = options.repositoryUrl ?? await _inferRepositoryUrl(harnessRoot);
+    final repositoryUrl =
+        options.repositoryUrl ?? await _inferRepositoryUrl(harnessRoot);
     await _ensureSubmodule(
       projectRoot: projectRoot,
       repositoryUrl: repositoryUrl,
@@ -331,8 +332,11 @@ final class HarnessInstaller {
       'very_good_analysis:$analyzerVersion',
       'assetify',
       'alchemist',
+      'bloc_lint',
+      'bloc_tools',
     ], workingDirectory: projectRoot);
-    if (_usesHarnessAnalysisOptions(projectRoot) && _hasPubspecDependency(projectRoot, 'flutter_lints')) {
+    if (_usesHarnessAnalysisOptions(projectRoot) &&
+        _hasPubspecDependency(projectRoot, 'flutter_lints')) {
       await _run('flutter', const [
         'pub',
         'remove',

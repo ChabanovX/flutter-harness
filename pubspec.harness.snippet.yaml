@@ -12,4 +12,6 @@ dependencies:
 dev_dependencies:
   alchemist: any
   assetify: any
+  bloc_lint: any
+  bloc_tools: any
   very_good_analysis: 10.2.0

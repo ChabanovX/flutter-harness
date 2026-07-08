@@ -3,6 +3,7 @@
 # package analyzed separately in its own package context.
 
 include:
+  - package:bloc_lint/recommended.yaml
   - package:very_good_analysis/analysis_options.yaml
 
 formatter:
