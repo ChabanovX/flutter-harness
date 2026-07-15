@@ -22,12 +22,28 @@ final class ArchitectureChecker {
       ),
       _excludedGlobs = config.architecture.excludedPaths
           .map((pattern) => Glob(pattern, context: p.posix))
+          .toList(growable: false),
+      _compositionGlobs = config.architecture.navigation.compositionPaths
+          .map((pattern) => Glob(pattern, context: p.posix))
+          .toList(growable: false),
+      _routerGlobs = config.architecture.navigation.routerPaths
+          .map((pattern) => Glob(pattern, context: p.posix))
+          .toList(growable: false),
+      _authorityGlobs = config.architecture.navigation.authorityPaths
+          .map((pattern) => Glob(pattern, context: p.posix))
+          .toList(growable: false),
+      _pageGlobs = config.architecture.navigation.pagePathGlobs
+          .map((pattern) => Glob(pattern, context: p.posix))
           .toList(growable: false);
 
   final HarnessConfig config;
   final ProjectLayout _layout;
   final ImportResolver _resolver;
   final List<Glob> _excludedGlobs;
+  final List<Glob> _compositionGlobs;
+  final List<Glob> _routerGlobs;
+  final List<Glob> _authorityGlobs;
+  final List<Glob> _pageGlobs;
 
   ArchitectureReport check() {
     final violations = <ArchitectureViolation>[];
@@ -35,10 +51,15 @@ final class ArchitectureChecker {
       p.join(config.root.path, config.project.libRoot),
     );
 
-    for (final file in dartFilesUnder(libDirectory)) {
-      final relativePath = relativePosix(file.path, from: config.root.path);
-      if (_excludedGlobs.any((glob) => glob.matches(relativePath))) continue;
-      _checkFile(file, relativePath, violations);
+    final files = <(File, String)>[
+      for (final file in dartFilesUnder(libDirectory))
+        if (!_isExcluded(relativePosix(file.path, from: config.root.path)))
+          (file, relativePosix(file.path, from: config.root.path)),
+    ];
+    final pageTypes = _collectProjectPageTypes(files);
+
+    for (final (file, relativePath) in files) {
+      _checkFile(file, relativePath, pageTypes, violations);
     }
 
     violations.sort();
@@ -71,6 +92,7 @@ final class ArchitectureChecker {
   void _checkFile(
     File file,
     String relativePath,
+    Set<String> pageTypes,
     List<ArchitectureViolation> violations,
   ) {
     final source = _layout.classify(relativePath);
@@ -168,6 +190,10 @@ final class ArchitectureChecker {
         forbidPrint: config.architecture.forbidPrint,
         enforceDtoLocation: config.architecture.enforceDtoLocation,
         serviceLocatorIdentifiers: config.architecture.serviceLocatorIdentifiers.toSet(),
+        pageTypes: pageTypes,
+        providerConstructors: config.architecture.navigation.providerConstructors.toSet(),
+        routerApiAllowed: _isRouterApiAllowed(relativePath),
+        compositionAllowed: _matchesAny(_compositionGlobs, relativePath),
         addViolation: (violation) => _add(violations, violation),
       ),
     );
@@ -194,6 +220,43 @@ final class ArchitectureChecker {
         violations: violations,
       );
     }
+  }
+
+  Set<String> _collectProjectPageTypes(List<(File, String)> files) {
+    final suffixes = config.architecture.navigation.pageTypeSuffixes;
+    final result = <String>{};
+    for (final (file, relativePath) in files) {
+      if (!_matchesAny(_pageGlobs, relativePath)) continue;
+      final parsed = parseString(
+        content: file.readAsStringSync(),
+        path: file.path,
+        featureSet: FeatureSet.latestLanguageVersion(),
+        throwIfDiagnostics: false,
+      );
+      for (final declaration in parsed.unit.declarations.whereType<ClassDeclaration>()) {
+        final name = declaration.classKeyword.next?.lexeme ?? '';
+        if (suffixes.any(name.endsWith)) result.add(name);
+      }
+    }
+    return Set<String>.unmodifiable(result);
+  }
+
+  bool _isExcluded(String relativePath) {
+    return _excludedGlobs.any((glob) => glob.matches(relativePath));
+  }
+
+  bool _matchesAny(List<Glob> globs, String relativePath) {
+    return globs.any((glob) => glob.matches(relativePath));
+  }
+
+  bool _isBlocAuthorityPath(String relativePath) {
+    return config.architecture.navigation.authority == NavigationAuthority.blocProjection &&
+        _matchesAny(_authorityGlobs, relativePath);
+  }
+
+  bool _isRouterApiAllowed(String relativePath) {
+    if (_isBlocAuthorityPath(relativePath)) return false;
+    return _matchesAny(_routerGlobs, relativePath);
   }
 
   void _checkUri({
@@ -321,6 +384,39 @@ final class ArchitectureChecker {
     required List<ArchitectureViolation> violations,
   }) {
     final package = target.packageName;
+
+    if (config.architecture.navigation.routerPackages.contains(package)) {
+      if (_isBlocAuthorityPath(source.path)) {
+        _add(
+          violations,
+          ArchitectureViolation(
+            rule: 'router_dependency_in_bloc_authority',
+            path: source.path,
+            line: line,
+            target: target.uri,
+            message:
+                'Navigation authority must own state/history without router '
+                'APIs. Move router projection to a configured router path.',
+            anchor: package,
+          ),
+        );
+      } else if (!_isRouterApiAllowed(source.path)) {
+        _add(
+          violations,
+          ArchitectureViolation(
+            rule: 'router_dependency_outside_router',
+            path: source.path,
+            line: line,
+            target: target.uri,
+            message:
+                'Import router packages only from configured router paths; '
+                'feature UI should send a feature-owned typed navigation '
+                'intent.',
+            anchor: package,
+          ),
+        );
+      }
+    }
 
     if (source.zone == ArchitectureZone.featureDomain || source.zone == ArchitectureZone.sharedDomain) {
       if (!config.architecture.allowedDomainPackages.contains(package)) {
@@ -572,8 +668,54 @@ final class _SourcePatternVisitor extends RecursiveAstVisitor<void> {
     required this.forbidPrint,
     required this.enforceDtoLocation,
     required this.serviceLocatorIdentifiers,
+    required this.pageTypes,
+    required this.providerConstructors,
+    required this.routerApiAllowed,
+    required this.compositionAllowed,
     required this.addViolation,
   });
+
+  static const _imperativeRouteConstructors = {
+    'MaterialPageRoute',
+    'CupertinoPageRoute',
+    'PageRouteBuilder',
+  };
+
+  static const _navigatorDurableMethods = {
+    'push',
+    'pushNamed',
+    'pushReplacement',
+    'pushReplacementNamed',
+    'popAndPushNamed',
+    'pushAndRemoveUntil',
+    'pushNamedAndRemoveUntil',
+    'popUntil',
+    'removeRoute',
+    'removeRouteBelow',
+    'replace',
+    'replaceRouteBelow',
+    'restorablePush',
+    'restorablePushNamed',
+    'restorablePushReplacement',
+    'restorablePushReplacementNamed',
+    'restorablePopAndPushNamed',
+    'restorablePushAndRemoveUntil',
+    'restorablePushNamedAndRemoveUntil',
+    'restorableReplace',
+    'restorableReplaceRouteBelow',
+  };
+
+  static const _goRouterContextMethods = {
+    'go',
+    'goNamed',
+    'pop',
+    'push',
+    'pushNamed',
+    'pushReplacement',
+    'pushReplacementNamed',
+    'replace',
+    'replaceNamed',
+  };
 
   final String relativePath;
   final SourceLocation source;
@@ -581,7 +723,24 @@ final class _SourcePatternVisitor extends RecursiveAstVisitor<void> {
   final bool forbidPrint;
   final bool enforceDtoLocation;
   final Set<String> serviceLocatorIdentifiers;
+  final Set<String> pageTypes;
+  final Set<String> providerConstructors;
+  final bool routerApiAllowed;
+  final bool compositionAllowed;
   final void Function(ArchitectureViolation violation) addViolation;
+
+  @override
+  void visitInstanceCreationExpression(InstanceCreationExpression node) {
+    final constructor = _withoutTypeArguments(
+      node.constructorName.toSource(),
+    );
+    _checkConstruction(
+      source: constructor,
+      arguments: node.argumentList,
+      offset: node.offset,
+    );
+    super.visitInstanceCreationExpression(node);
+  }
 
   @override
   void visitMethodInvocation(MethodInvocation node) {
@@ -616,7 +775,204 @@ final class _SourcePatternVisitor extends RecursiveAstVisitor<void> {
       );
     }
 
+    final invokedType = _invokedType(node);
+    if (invokedType != null) {
+      _checkConstruction(
+        source: _withoutTypeArguments(node.toSource()),
+        arguments: node.argumentList,
+        offset: node.offset,
+        invokedType: invokedType,
+      );
+    }
+
+    if (!routerApiAllowed) {
+      final navigationAnchor = _imperativeNavigationAnchor(node);
+      if (navigationAnchor != null) {
+        addViolation(
+          ArchitectureViolation(
+            rule: 'imperative_screen_navigation',
+            path: relativePath,
+            line: lineForOffset(node.offset),
+            message:
+                'Move durable navigation to a configured router path and '
+                'send a feature-owned typed intent from feature UI.',
+            anchor: navigationAnchor,
+          ),
+        );
+      }
+    }
+
     super.visitMethodInvocation(node);
+  }
+
+  void _checkConstruction({
+    required String source,
+    required ArgumentList arguments,
+    required int offset,
+    String? invokedType,
+  }) {
+    final type = invokedType ?? _knownTypeIn(source);
+    if (type == null) return;
+
+    if (!routerApiAllowed && _imperativeRouteConstructors.contains(type)) {
+      addViolation(
+        ArchitectureViolation(
+          rule: 'imperative_screen_navigation',
+          path: relativePath,
+          line: lineForOffset(offset),
+          message:
+              'Construct durable routes only in a configured router path; '
+              'feature UI should send a feature-owned typed navigation '
+              'intent.',
+          anchor: type,
+        ),
+      );
+    }
+
+    if (!compositionAllowed && pageTypes.contains(type)) {
+      addViolation(
+        ArchitectureViolation(
+          rule: 'page_composition_outside_navigation',
+          path: relativePath,
+          line: lineForOffset(offset),
+          message:
+              'Create project Page/Screen widgets only in a configured '
+              'composition path; feature UI should send a feature-owned '
+              'typed navigation intent.',
+          anchor: type,
+        ),
+      );
+    }
+
+    if (providerConstructors.contains(type)) {
+      if (!compositionAllowed) {
+        addViolation(
+          ArchitectureViolation(
+            rule: 'bloc_provider_outside_composition',
+            path: relativePath,
+            line: lineForOffset(offset),
+            message:
+                'Move Bloc providers to a configured composition path and '
+                'let feature pages consume already-provided state.',
+            anchor: type,
+          ),
+        );
+      }
+      if (_isValueConstructor(source)) {
+        final createdType = _directlyCreatedBlocType(arguments);
+        if (createdType != null) {
+          addViolation(
+            ArchitectureViolation(
+              rule: 'bloc_provider_value_creates_instance',
+              path: relativePath,
+              line: lineForOffset(offset),
+              message:
+                  'BlocProvider.value must reuse an existing Bloc/Cubit; use '
+                  'the create constructor for a new instance in a configured '
+                  'composition path.',
+              anchor: '$type.value:$createdType',
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  String? _knownTypeIn(String source) {
+    final knownTypes = {
+      ..._imperativeRouteConstructors,
+      ...pageTypes,
+      ...providerConstructors,
+    };
+    for (final identifier in _identifiers(source)) {
+      if (knownTypes.contains(identifier)) return identifier;
+    }
+    return null;
+  }
+
+  String? _invokedType(MethodInvocation node) {
+    final method = node.methodName.name;
+    final knownMethod = _knownTypeIn(method);
+    if (knownMethod != null) return knownMethod;
+    final target = node.target?.toSource();
+    return target == null ? null : _knownTypeIn(_withoutTypeArguments(target));
+  }
+
+  String? _imperativeNavigationAnchor(MethodInvocation node) {
+    final method = node.methodName.name;
+    final target = _withoutTypeArguments(node.target?.toSource() ?? '');
+    final targetIdentifiers = _identifiers(target).toList(growable: false);
+    final targetLastIdentifier = targetIdentifiers.isEmpty ? null : targetIdentifiers.last;
+
+    if (targetLastIdentifier == 'Navigator' && _navigatorDurableMethods.contains(method)) {
+      return 'Navigator.$method';
+    }
+    if (_isOfCall(target, 'Navigator') && _navigatorDurableMethods.contains(method)) {
+      return 'Navigator.of.$method';
+    }
+    if (targetLastIdentifier == 'GoRouter' && method == 'of') {
+      return 'GoRouter.of';
+    }
+    if (_isOfCall(target, 'GoRouter')) return 'GoRouter.of.$method';
+    if (target == 'context' && _goRouterContextMethods.contains(method)) {
+      return 'context.$method';
+    }
+    return null;
+  }
+
+  bool _isOfCall(String source, String type) {
+    return RegExp(
+      '(?:^|\\.)${RegExp.escape(type)}\\s*\\.\\s*of\\s*\\(',
+    ).hasMatch(source);
+  }
+
+  bool _isValueConstructor(String source) {
+    return RegExp(r'\.\s*value\s*(?:\(|$)').hasMatch(source);
+  }
+
+  String? _directlyCreatedBlocType(ArgumentList arguments) {
+    for (final argument in arguments.arguments.whereType<NamedArgument>()) {
+      if (argument.name.lexeme != 'value') continue;
+      final expression = argument.argumentExpression;
+      if (expression is InstanceCreationExpression) {
+        return _blocTypeIn(expression.constructorName.toSource());
+      }
+      if (expression is MethodInvocation) {
+        return _blocTypeIn(expression.toSource());
+      }
+      if (expression is ParenthesizedExpression) {
+        return _blocTypeIn(expression.expression.toSource());
+      }
+    }
+    return null;
+  }
+
+  String? _blocTypeIn(String source) {
+    for (final identifier in _identifiers(_withoutTypeArguments(source))) {
+      if (identifier.endsWith('Bloc') || identifier.endsWith('Cubit')) {
+        return identifier;
+      }
+    }
+    return null;
+  }
+
+  Iterable<String> _identifiers(String source) {
+    return RegExp(r'[A-Za-z_]\w*').allMatches(source).map((match) => match.group(0)!);
+  }
+
+  String _withoutTypeArguments(String source) {
+    final buffer = StringBuffer();
+    var depth = 0;
+    for (final codeUnit in source.codeUnits) {
+      if (codeUnit == 60) {
+        depth += 1;
+      } else if (codeUnit == 62 && depth > 0) {
+        depth -= 1;
+      } else if (depth == 0) {
+        buffer.writeCharCode(codeUnit);
+      }
+    }
+    return buffer.toString();
   }
 
   @override

@@ -8,6 +8,7 @@ const applicationDependencyArguments = [
   'pub',
   'add',
   'flutter_bloc',
+  'go_router',
   'get_it',
   'logger',
   'intl',
@@ -233,6 +234,7 @@ final class HarnessInstaller {
       '.agent_harness.yaml',
       '.agent_harness/baseline.json',
       'analysis_options.harness.snippet.yaml',
+      'docs/architecture/navigation.md',
       'tool/agent_harness/pubspec.yaml',
     ];
     for (final path in requiredFiles) {
@@ -459,6 +461,10 @@ String renderAgentInstructions(String source, String submodulePath) {
       .replaceAll(
         'docs/architecture/commenting.md',
         '$path/docs/architecture/commenting.md',
+      )
+      .replaceAll(
+        'docs/architecture/navigation.md',
+        '$path/docs/architecture/navigation.md',
       );
 }
 

@@ -7,7 +7,7 @@ import 'package:test/test.dart';
 import 'test_project.dart';
 
 void main() {
-  test('creates design, l10n, logging, and error reporter primitives', () async {
+  test('creates primitives plus navigation and router roots', () async {
     final project = TestProject.create();
     addTearDown(project.dispose);
 
@@ -48,6 +48,14 @@ void main() {
     );
     expect(
       File(p.join(project.root.path, 'lib/shared/domain/error_reporter.dart')).existsSync(),
+      isTrue,
+    );
+    expect(
+      Directory(p.join(project.root.path, 'lib/app/navigation')).existsSync(),
+      isTrue,
+    );
+    expect(
+      Directory(p.join(project.root.path, 'lib/app/router')).existsSync(),
       isTrue,
     );
   });

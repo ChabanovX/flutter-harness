@@ -5,6 +5,8 @@
 1. Read `docs/architecture/overview.md` and the nearest feature's tests.
    When adding or changing comments, Dartdoc, TODOs, lint suppressions, or
    localization metadata, also read `docs/architecture/commenting.md`.
+   For navigation, page composition, or Bloc/Provider lifetime changes, also
+   read `docs/architecture/navigation.md`.
 2. Inspect an existing feature with the same state and data-flow shape.
 3. Define the behavioral acceptance criteria, including loading, empty, failure, retry, and offline behavior where applicable.
 4. Keep the change inside one vertical slice unless the task explicitly changes a shared contract.
@@ -19,7 +21,7 @@
 - `application/` owns operations and ports. It may import the same feature's domain/application and `shared/domain`.
 - `data/` owns DTOs, serialization, transport/persistence adapters, mappers, and repository implementations.
 - `presentation/` owns Cubits, states, pages, and widgets. It never imports `data/`, Dio, persistence packages, or the service locator.
-- The router owns navigation state. A feature Cubit may expose navigation intent, but it must not become a second router.
+- `bloc_projection` is the default and required navigation model unless the project explicitly configures `authority: router`.
 - Dependencies are resolved only in `app/di`, route/provider factories, and generated feature registration modules.
 - Transport and persistence errors are converted to `AppFailure` before leaving `data/`.
 - DTOs and JSON/wire details never leave `data/`.
@@ -28,6 +30,16 @@
 - Shared public constants live in `core/constants`: UI primitives in `ui_constants.dart`, network endpoints/config/timeouts/retry policy in `network_constants.dart`. Constants used only by one file stay private in that file.
 - Generated files are never edited manually.
 - Use `AppLogger` or the project's logging facade; do not add `print()`.
+
+## Navigation boundaries
+
+- In `bloc_projection`, the navigation Bloc, state, and history live only in `app/navigation`. `app/router` reads that state and projects it to pages and URLs; navigation authority never imports or calls router APIs.
+- In opt-in `router` mode, the configured router owns location and history directly. Provider placement and feature-owned intent rules remain unchanged.
+- Sidebar, bottom navigation, navigation rail, fullscreen flows, and ordinary pages are variants of the app shell/composition root, not separate navigation architectures.
+- A feature defines a narrow navigation port in its presentation layer. App composition implements and injects that port through the navigation authority.
+- Durable Back and other page/history changes go through a typed intent and the configured authority. `Navigator.pop`/`maybePop` may close only a local dialog, sheet, menu, or other transient UI.
+- Pages consume already-provided Cubits/Blocs. `BlocProvider` and `MultiBlocProvider` belong only in configured composition paths; `BlocProvider.value` never creates a new Cubit/Bloc.
+- During review, verify authority ownership, hidden parallel navigation stacks, transient-only pop usage, action-to-intent mapping, Cubit lifetime, route arguments/providers, deep links, browser history, restoration, system Back, and navigation hidden behind wrappers, re-exports, callbacks, or dynamic calls. These are review checks, not heuristic static warnings.
 
 ## State conventions
 

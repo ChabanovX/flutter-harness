@@ -38,6 +38,13 @@ final class HarnessConfig {
 
     final projectMap = _asMap(map['project']);
     final architectureMap = _asMap(map['architecture']);
+    final navigationValue = architectureMap['navigation'];
+    if (navigationValue != null && navigationValue is! Map) {
+      throw const FormatException(
+        'architecture.navigation must be a YAML map.',
+      );
+    }
+    final navigationMap = _asMap(navigationValue);
     final qualityMap = _asMap(map['quality']);
     final stateManagerMap = _asMap(qualityMap['state_manager']);
     final goldenMap = _asMap(map['golden']);
@@ -62,6 +69,64 @@ final class HarnessConfig {
       ),
     );
     project.validate();
+
+    final navigation = NavigationConfig(
+      authority: _navigationAuthority(navigationMap['authority']),
+      compositionPaths: _configurationPathList(
+        navigationMap['composition_paths'],
+        key: 'architecture.navigation.composition_paths',
+        fallback: [
+          p.posix.join(project.libRoot, 'main.dart'),
+          p.posix.join(project.appRoot, 'app.dart'),
+          p.posix.join(project.appRoot, 'router/**'),
+          p.posix.join(project.appRoot, 'navigation/**'),
+        ],
+      ),
+      routerPaths: _configurationPathList(
+        navigationMap['router_paths'],
+        key: 'architecture.navigation.router_paths',
+        fallback: [
+          p.posix.join(project.libRoot, 'main.dart'),
+          p.posix.join(project.appRoot, 'app.dart'),
+          p.posix.join(project.appRoot, 'router/**'),
+        ],
+      ),
+      authorityPaths: _configurationPathList(
+        navigationMap['authority_paths'],
+        key: 'architecture.navigation.authority_paths',
+        fallback: [p.posix.join(project.appRoot, 'navigation/**')],
+      ),
+      routerPackages: _configurationStringList(
+        navigationMap['router_packages'],
+        key: 'architecture.navigation.router_packages',
+        fallback: const ['go_router'],
+      ),
+      providerConstructors: _configurationStringList(
+        navigationMap['provider_constructors'],
+        key: 'architecture.navigation.provider_constructors',
+        fallback: const ['BlocProvider', 'MultiBlocProvider'],
+      ),
+      pagePathGlobs: _configurationPathList(
+        navigationMap['page_path_globs'],
+        key: 'architecture.navigation.page_path_globs',
+        fallback: [
+          p.posix.join(
+            project.featureRoot,
+            '*/presentation/pages/**',
+          ),
+          p.posix.join(
+            project.featureRoot,
+            '*/presentation/screens/**',
+          ),
+        ],
+      ),
+      pageTypeSuffixes: _configurationStringList(
+        navigationMap['page_type_suffixes'],
+        key: 'architecture.navigation.page_type_suffixes',
+        fallback: const ['Page', 'Screen'],
+      ),
+    );
+    navigation.validate();
 
     final defaultForbiddenInternalRoots = [
       'network',
@@ -155,6 +220,7 @@ final class HarnessConfig {
           architectureMap['forbid_print'],
           fallback: true,
         ),
+        navigation: navigation,
         exceptions: _exceptions(architectureMap['exceptions']),
       ),
       quality: QualityConfig(
@@ -375,6 +441,7 @@ final class ArchitectureConfig {
     required this.serviceLocatorIdentifiers,
     required this.enforceDtoLocation,
     required this.forbidPrint,
+    required this.navigation,
     required this.exceptions,
   });
 
@@ -390,7 +457,58 @@ final class ArchitectureConfig {
   final List<String> serviceLocatorIdentifiers;
   final bool enforceDtoLocation;
   final bool forbidPrint;
+  final NavigationConfig navigation;
   final List<ArchitectureException> exceptions;
+}
+
+enum NavigationAuthority {
+  blocProjection('bloc_projection'),
+  router('router');
+
+  const NavigationAuthority(this.configValue);
+
+  final String configValue;
+}
+
+final class NavigationConfig {
+  const NavigationConfig({
+    required this.authority,
+    required this.compositionPaths,
+    required this.routerPaths,
+    required this.authorityPaths,
+    required this.routerPackages,
+    required this.providerConstructors,
+    required this.pagePathGlobs,
+    required this.pageTypeSuffixes,
+  });
+
+  final NavigationAuthority authority;
+  final List<String> compositionPaths;
+  final List<String> routerPaths;
+  final List<String> authorityPaths;
+  final List<String> routerPackages;
+  final List<String> providerConstructors;
+  final List<String> pagePathGlobs;
+  final List<String> pageTypeSuffixes;
+
+  void validate() {
+    if (compositionPaths.isEmpty) {
+      throw const FormatException(
+        'architecture.navigation.composition_paths must not be empty.',
+      );
+    }
+    if (routerPaths.isEmpty) {
+      throw const FormatException(
+        'architecture.navigation.router_paths must not be empty.',
+      );
+    }
+    if (authority == NavigationAuthority.blocProjection && authorityPaths.isEmpty) {
+      throw const FormatException(
+        'architecture.navigation.authority_paths must not be empty when '
+        'authority is bloc_projection.',
+      );
+    }
+  }
 }
 
 final class ArchitectureException {
@@ -554,6 +672,56 @@ List<String> _stringList(Object? value, {required Iterable<String> fallback}) {
     return value.map((item) => item.toString()).toList(growable: false);
   }
   return List<String>.unmodifiable(fallback);
+}
+
+NavigationAuthority _navigationAuthority(Object? value) {
+  if (value == null) return NavigationAuthority.blocProjection;
+  if (value is! String || value.trim().isEmpty) {
+    throw const FormatException(
+      'architecture.navigation.authority must be bloc_projection or router.',
+    );
+  }
+
+  final normalized = value.trim();
+  for (final authority in NavigationAuthority.values) {
+    if (authority.configValue == normalized) return authority;
+  }
+  throw FormatException(
+    'Unknown architecture.navigation.authority "$normalized"; expected '
+    'bloc_projection or router.',
+  );
+}
+
+List<String> _configurationStringList(
+  Object? value, {
+  required String key,
+  required Iterable<String> fallback,
+}) {
+  if (value == null) return List<String>.unmodifiable(fallback);
+  if (value is! Iterable || value is String) {
+    throw FormatException('$key must be a YAML list of non-empty strings.');
+  }
+
+  final result = <String>[];
+  for (final item in value) {
+    if (item is! String || item.trim().isEmpty) {
+      throw FormatException('$key must contain only non-empty strings.');
+    }
+    result.add(item.trim());
+  }
+  return List<String>.unmodifiable(result);
+}
+
+List<String> _configurationPathList(
+  Object? value, {
+  required String key,
+  required Iterable<String> fallback,
+}) {
+  return _configurationStringList(
+    value,
+    key: key,
+    fallback: fallback,
+  ).map(_normalizedPath).toList(growable: false);
 }
 
 List<String> _normalizedPathList(

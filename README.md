@@ -5,14 +5,14 @@ A drop-in development harness for a general Flutter application using:
 - feature-first Clean Architecture;
 - an explicit application layer;
 - Cubit-first presentation state;
-- router-owned navigation;
+- statically checked navigation authority and composition;
 - modular dependency injection;
 - normalized failures at repository boundaries;
 - strict UI contracts for design tokens, localization, asset constants, goldens, and logging;
 - executable dependency rules;
 - deterministic scaffolding and one verification command.
 
-This starter deliberately excludes TV/D-pad navigation, focus graphs, permanent tab mounting, custom back-stack machinery, and TV-specific cache/image primitives.
+This starter deliberately excludes TV/D-pad navigation, focus graphs, custom TV back-stack machinery, and TV-specific cache/image primitives.
 
 ## Requirements
 
@@ -35,7 +35,7 @@ By default, the installer:
 - adds this repository as a submodule at `tool/flutter_agentic_harness`;
 - writes a project-local `tool/harness.dart` launcher that delegates to the submodule;
 - writes `AGENTS.md`, `.agent_harness.yaml`, `.agent_harness/baseline.json`, and `analysis_options.yaml`;
-- runs `flutter pub add flutter_bloc get_it logger intl "flutter_localizations:{sdk: flutter}"`;
+- runs `flutter pub add flutter_bloc go_router get_it logger intl "flutter_localizations:{sdk: flutter}"`;
 - runs `flutter pub add --dev very_good_analysis:10.2.0 assetify alchemist bloc_lint bloc_tools`.
 
 Useful options:
@@ -69,7 +69,7 @@ docs/
 tool/
 ```
 
-Generated feature code expects `flutter_bloc`, `flutter_localizations`, `intl`, `logger`, and, when DI module generation is enabled, `get_it` in the application. Merge the relevant entries from `pubspec.harness.snippet.yaml`, including the `very_good_analysis`, `bloc_lint`, `bloc_tools`, `assetify`, and `alchemist` dev dependencies. Use `analysis_options.harness.snippet.yaml` as the application's root analysis options, or merge it into an existing file. The analyzer preset mirrors `fl_init_analyzer`, adds the official Bloc lint recommended rules, and still excludes the nested tool package so it is analyzed only in its own package context. Then run:
+Generated feature code and navigation defaults expect `flutter_bloc`, `go_router`, `flutter_localizations`, `intl`, `logger`, and, when DI module generation is enabled, `get_it` in the application. Merge the relevant entries from `pubspec.harness.snippet.yaml`, including the `very_good_analysis`, `bloc_lint`, `bloc_tools`, `assetify`, and `alchemist` dev dependencies. Use `analysis_options.harness.snippet.yaml` as the application's root analysis options, or merge it into an existing file. The analyzer preset mirrors `fl_init_analyzer`, adds the official Bloc lint recommended rules, and still excludes the nested tool package so it is analyzed only in its own package context. Then run:
 
 ```bash
 flutter pub get
@@ -114,7 +114,7 @@ dart run tool/harness.dart golden --update
 dart run tool/harness.dart scaffold feature notifications --entity notification
 ```
 
-The scaffolder creates domain, application, data, presentation, DI-registration, and test files. Generated pages read copy from `AppLocalizations` and spacing from the design token extension. It does not invent the concrete HTTP implementation or edit the router automatically; those are intentionally explicit integration steps. Shared constants belong in `core/constants`, while file-local constants stay private next to their usage. Screen navigation belongs in the router/composition layer: feature UI should dispatch typed navigation intent instead of constructing routes or calling `Navigator.push`/`GoRouter` directly.
+The scaffolder creates domain, application, data, presentation, DI-registration, and test files. Generated pages read copy from `AppLocalizations` and spacing from the design token extension. It does not invent the concrete HTTP implementation or edit navigation composition automatically; those are intentionally explicit integration steps. Shared constants belong in `core/constants`, while file-local constants stay private next to their usage. Feature UI dispatches typed navigation intent; app composition owns page/provider construction for normal pages, fullscreen routes, sidebar, bottom navigation, and navigation rail.
 
 ## Harness self-checks
 
@@ -147,5 +147,7 @@ lib/
 ├── shared/
 └── features/<feature>/{domain,application,data,presentation}/
 ```
+
+Navigation defaults to `bloc_projection`: a Bloc under `lib/app/navigation` owns navigation state/history, and `lib/app/router` projects it to pages and URLs. Set `architecture.navigation.authority: router` only when the router should directly own location/history. Both modes keep router APIs, project Page/Screen construction, and Bloc providers inside their configured router/composition paths. See [docs/architecture/navigation.md](docs/architecture/navigation.md).
 
 See `docs/architecture/` before changing the rules.

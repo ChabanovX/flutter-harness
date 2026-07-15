@@ -16,8 +16,7 @@ final class InitCommand extends Command<int> {
   }
 
   @override
-  String get description =>
-      'Create shared result/failure, constants, design, l10n, logging, and architecture primitives.';
+  String get description => 'Create shared primitives and app navigation/composition directories.';
 
   @override
   String get name => 'init';
@@ -97,6 +96,7 @@ final class InitCommand extends Command<int> {
 
     for (final directory in [
       p.posix.join(project.appRoot, 'bootstrap'),
+      p.posix.join(project.appRoot, 'navigation'),
       p.posix.join(project.appRoot, 'router'),
       p.posix.join(project.coreRoot, 'analytics'),
       p.posix.join(project.coreRoot, 'constants'),

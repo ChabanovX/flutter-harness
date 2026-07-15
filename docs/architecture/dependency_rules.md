@@ -38,6 +38,14 @@ Presentation may use UI packages but cannot import transport, persistence, or se
 - `part` and URI-based `part of` directives cannot cross feature or layer boundaries.
 - configured generated-file globs are skipped by layer checks but remain covered by normal Dart/Flutter analysis.
 
+## Navigation and composition
+
+Navigation has one configured authority. `bloc_projection` is the default: `app/navigation` owns state/history without router dependencies, while `app/router` projects state to pages and URLs. `authority: router` is an explicit opt-in where configured router paths own location/history directly.
+
+The checker discovers project-owned Page/Screen declarations from configured globs before scanning all Dart files under `lib_root`. It rejects router-package dependencies and durable Navigator/GoRouter APIs outside router paths, project page/screen construction and Bloc providers outside composition paths, and new Bloc/Cubit instances passed to `BlocProvider.value`. Feature UI may use Bloc builders/listeners/selectors, read existing state from context, and close transient UI with `Navigator.pop`/`maybePop`.
+
+See [navigation.md](navigation.md) for the complete boundary and the checklist-only behaviors that static syntax checks cannot prove.
+
 ## Baseline behavior
 
 `.agent_harness/baseline.json` stores reviewed existing violations. A normal run reports:

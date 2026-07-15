@@ -20,6 +20,30 @@ void main() {
       config.architecture.presentationForbiddenInternalRoots,
       contains('lib/core/network'),
     );
+    expect(
+      config.architecture.navigation.authority,
+      NavigationAuthority.blocProjection,
+    );
+    expect(config.architecture.navigation.compositionPaths, [
+      'lib/main.dart',
+      'lib/app/app.dart',
+      'lib/app/router/**',
+      'lib/app/navigation/**',
+    ]);
+    expect(config.architecture.navigation.routerPaths, [
+      'lib/main.dart',
+      'lib/app/app.dart',
+      'lib/app/router/**',
+    ]);
+    expect(
+      config.architecture.navigation.authorityPaths,
+      ['lib/app/navigation/**'],
+    );
+    expect(config.architecture.navigation.routerPackages, ['go_router']);
+    expect(config.architecture.navigation.providerConstructors, [
+      'BlocProvider',
+      'MultiBlocProvider',
+    ]);
     expect(config.quality.enforceDesignTokens, isTrue);
     expect(config.quality.enforceLocalization, isTrue);
     expect(config.quality.enforceAssets, isTrue);
@@ -52,29 +76,80 @@ void main() {
   test('supports custom roots consistently', () {
     final project = TestProject.create(
       config: '''project:
-  lib_root: lib
-  feature_root: lib/src/modules
-  app_root: lib/src/app
-  core_root: lib/src/platform
-  shared_root: lib/src/shared
+  lib_root: source
+  feature_root: source/modules
+  app_root: source/app
+  core_root: source/platform
+  shared_root: source/shared
 architecture:
   presentation_forbidden_internal_roots:
-    - lib/src/platform/http
+    - source/platform/http
 ''',
     );
     addTearDown(project.dispose);
 
     final config = HarnessConfig.load(project.root);
 
-    expect(config.project.featureRoot, 'lib/src/modules');
+    expect(config.project.featureRoot, 'source/modules');
     expect(
-      config.project.packagePath('lib/src/modules/catalog'),
-      'src/modules/catalog',
+      config.project.packagePath('source/modules/catalog'),
+      'modules/catalog',
     );
     expect(
       config.architecture.presentationForbiddenInternalRoots,
-      ['lib/src/platform/http'],
+      ['source/platform/http'],
     );
+    expect(config.architecture.navigation.compositionPaths, [
+      'source/main.dart',
+      'source/app/app.dart',
+      'source/app/router/**',
+      'source/app/navigation/**',
+    ]);
+    expect(
+      config.architecture.navigation.authorityPaths,
+      ['source/app/navigation/**'],
+    );
+    expect(config.architecture.navigation.pagePathGlobs, [
+      'source/modules/*/presentation/pages/**',
+      'source/modules/*/presentation/screens/**',
+    ]);
+  });
+
+  test('supports router authority and custom navigation symbols', () {
+    final project = TestProject.create(
+      config: '''architecture:
+  navigation:
+    authority: router
+    composition_paths:
+      - lib/bootstrap.dart
+      - lib/navigation/**
+    router_paths:
+      - lib/navigation/**
+    authority_paths: []
+    router_packages:
+      - auto_route
+    provider_constructors:
+      - FeatureProvider
+    page_path_globs:
+      - lib/modules/**/views/**
+    page_type_suffixes:
+      - View
+''',
+    );
+    addTearDown(project.dispose);
+
+    final navigation = HarnessConfig.load(project.root).architecture.navigation;
+
+    expect(navigation.authority, NavigationAuthority.router);
+    expect(navigation.compositionPaths, [
+      'lib/bootstrap.dart',
+      'lib/navigation/**',
+    ]);
+    expect(navigation.routerPaths, ['lib/navigation/**']);
+    expect(navigation.authorityPaths, isEmpty);
+    expect(navigation.routerPackages, ['auto_route']);
+    expect(navigation.providerConstructors, ['FeatureProvider']);
+    expect(navigation.pageTypeSuffixes, ['View']);
   });
 
   test('supports quality and golden overrides', () {
@@ -160,5 +235,103 @@ golden:
     addTearDown(project.dispose);
 
     expect(() => HarnessConfig.load(project.root), throwsFormatException);
+  });
+
+  test('rejects unknown navigation authority', () {
+    final project = TestProject.create(
+      config: '''architecture:
+  navigation:
+    authority: cubit
+''',
+    );
+    addTearDown(project.dispose);
+
+    expect(
+      () => HarnessConfig.load(project.root),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          contains('bloc_projection or router'),
+        ),
+      ),
+    );
+  });
+
+  test('rejects empty required navigation paths', () {
+    final emptyRouterPaths = TestProject.create(
+      config: '''architecture:
+  navigation:
+    router_paths: []
+''',
+    );
+    final emptyAuthorityPaths = TestProject.create(
+      config: '''architecture:
+  navigation:
+    authority_paths: []
+''',
+    );
+    addTearDown(emptyRouterPaths.dispose);
+    addTearDown(emptyAuthorityPaths.dispose);
+
+    expect(
+      () => HarnessConfig.load(emptyRouterPaths.root),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          contains('router_paths must not be empty'),
+        ),
+      ),
+    );
+    expect(
+      () => HarnessConfig.load(emptyAuthorityPaths.root),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          contains('authority_paths must not be empty'),
+        ),
+      ),
+    );
+  });
+
+  test('rejects malformed navigation lists and entries', () {
+    final scalar = TestProject.create(
+      config: '''architecture:
+  navigation:
+    router_paths: lib/app/router/**
+''',
+    );
+    final emptyEntry = TestProject.create(
+      config: '''architecture:
+  navigation:
+    page_type_suffixes:
+      - ""
+''',
+    );
+    addTearDown(scalar.dispose);
+    addTearDown(emptyEntry.dispose);
+
+    expect(
+      () => HarnessConfig.load(scalar.root),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          contains('router_paths must be a YAML list'),
+        ),
+      ),
+    );
+    expect(
+      () => HarnessConfig.load(emptyEntry.root),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          contains('page_type_suffixes must contain only'),
+        ),
+      ),
+    );
   });
 }

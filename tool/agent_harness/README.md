@@ -14,7 +14,10 @@ Application-facing commands exposed by this package include:
 
 ```bash
 dart run tool/harness.dart quality
+dart run tool/harness.dart architecture --json
 dart run tool/harness.dart generate
 dart run tool/harness.dart golden
 dart run tool/harness.dart verify --changed
 ```
+
+Navigation placement and authority violations are architecture violations, so they participate in exceptions, the shrink-only baseline, JSON reports, and `verify`.

@@ -87,7 +87,6 @@ final class QualityChecker {
     final enforceLocalization = config.quality.enforceLocalization && uiPath;
     final enforceAssets = config.quality.enforceAssets;
     final enforceLogging = config.quality.enforceLogging && !_isLoggingFacadePath(relativePath);
-    final enforceNavigation = uiPath && !_isNavigationCompositionPath(relativePath);
     final enforceConstants = _isLibPath(relativePath) && !_isSharedConstantsPath(relativePath);
     final enforceStateManagers = config.quality.enforceStateManagerContracts && _isPresentationSourcePath(relativePath);
 
@@ -96,7 +95,6 @@ final class QualityChecker {
         !enforceLocalization &&
         !enforceAssets &&
         !enforceLogging &&
-        !enforceNavigation &&
         !enforceConstants &&
         !enforceStateManagers) {
       return;
@@ -186,7 +184,6 @@ final class QualityChecker {
         enforceLocalization: enforceLocalization,
         enforceAssets: enforceAssets,
         enforceLogging: enforceLogging,
-        enforceNavigation: enforceNavigation,
         enforceConstants: enforceConstants,
         addViolation: (violation) => _add(violations, violation),
       ),
@@ -229,17 +226,6 @@ final class QualityChecker {
 
   bool _isLoggingFacadePath(String relativePath) {
     return relativePath.startsWith('${config.project.coreRoot}/logging/');
-  }
-
-  bool _isNavigationCompositionPath(String relativePath) {
-    if (relativePath.startsWith('test/') || relativePath.startsWith('integration_test/')) {
-      return true;
-    }
-
-    final appRoot = config.project.appRoot;
-    return relativePath.startsWith('$appRoot/router/') ||
-        relativePath.startsWith('$appRoot/bootstrap/') ||
-        relativePath.startsWith('$appRoot/di/');
   }
 
   bool _isSharedConstantsPath(String relativePath) {
@@ -620,7 +606,6 @@ final class _QualityAstVisitor extends RecursiveAstVisitor<void> {
     required this.enforceLocalization,
     required this.enforceAssets,
     required this.enforceLogging,
-    required this.enforceNavigation,
     required this.enforceConstants,
     required this.addViolation,
   });
@@ -688,7 +673,6 @@ final class _QualityAstVisitor extends RecursiveAstVisitor<void> {
   final bool enforceLocalization;
   final bool enforceAssets;
   final bool enforceLogging;
-  final bool enforceNavigation;
   final bool enforceConstants;
   final void Function(QualityViolation violation) addViolation;
 
@@ -696,15 +680,6 @@ final class _QualityAstVisitor extends RecursiveAstVisitor<void> {
   void visitInstanceCreationExpression(InstanceCreationExpression node) {
     final constructor = _normalizedConstructor(node.constructorName.toSource());
     final className = constructor.split('.').first;
-
-    if (enforceNavigation && _isImperativeRouteConstructor(className)) {
-      _violate(
-        rule: 'imperative_screen_navigation',
-        offset: node.offset,
-        message: 'Route construction belongs in the app router; feature UI should dispatch navigation intent.',
-        anchor: constructor,
-      );
-    }
 
     if (enforceDesign) {
       _checkDesignConstructor(
@@ -747,15 +722,6 @@ final class _QualityAstVisitor extends RecursiveAstVisitor<void> {
   void visitMethodInvocation(MethodInvocation node) {
     final constructor = _methodConstructorName(node);
     final className = constructor?.split('.').first;
-
-    if (enforceNavigation && _isImperativeNavigationCall(node)) {
-      _violate(
-        rule: 'imperative_screen_navigation',
-        offset: node.offset,
-        message: 'Use the app router or a typed navigation intent instead of direct screen navigation.',
-        anchor: node.toSource(),
-      );
-    }
 
     if (enforceConstants && _isCompileTimeEnvironmentLookup(node)) {
       _violate(
@@ -1021,32 +987,6 @@ final class _QualityAstVisitor extends RecursiveAstVisitor<void> {
     return current;
   }
 
-  bool _isImperativeRouteConstructor(String className) {
-    return className == 'MaterialPageRoute' || className == 'CupertinoPageRoute' || className == 'PageRouteBuilder';
-  }
-
-  bool _isImperativeNavigationCall(MethodInvocation node) {
-    final method = node.methodName.name;
-    final target = node.target?.toSource();
-
-    if (target == 'Navigator' && _navigatorScreenMethods.contains(method)) {
-      return true;
-    }
-    if (target?.startsWith('Navigator.of(') ?? false) {
-      return _navigatorScreenMethods.contains(method);
-    }
-    if (target?.startsWith('GoRouter.of(') ?? false) {
-      return true;
-    }
-    if (target == 'GoRouter' && method == 'of') {
-      return true;
-    }
-    if (_goRouterContextMethods.contains(method) && target == 'context') {
-      return true;
-    }
-    return false;
-  }
-
   bool _isCompileTimeEnvironmentLookup(MethodInvocation node) {
     final target = node.target?.toSource();
     final method = node.methodName.name;
@@ -1057,34 +997,6 @@ final class _QualityAstVisitor extends RecursiveAstVisitor<void> {
     if (value == null) return false;
     return value.startsWith('http://') || value.startsWith('https://');
   }
-
-  static const _navigatorScreenMethods = {
-    'push',
-    'pushNamed',
-    'pushReplacement',
-    'pushReplacementNamed',
-    'popAndPushNamed',
-    'pushAndRemoveUntil',
-    'pushNamedAndRemoveUntil',
-    'restorablePush',
-    'restorablePushNamed',
-    'restorablePushReplacement',
-    'restorablePushReplacementNamed',
-    'restorablePopAndPushNamed',
-    'restorablePushAndRemoveUntil',
-    'restorablePushNamedAndRemoveUntil',
-  };
-
-  static const _goRouterContextMethods = {
-    'go',
-    'goNamed',
-    'push',
-    'pushNamed',
-    'pushReplacement',
-    'pushReplacementNamed',
-    'replace',
-    'replaceNamed',
-  };
 
   bool _isDeveloperLogTarget(String? target) {
     if (target == null) return developerImport.unprefixed;

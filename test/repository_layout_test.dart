@@ -16,6 +16,7 @@ void main() {
       expect(File('tool/install_harness.dart').existsSync(), isTrue);
       expect(File('tool/harness.dart').existsSync(), isTrue);
       expect(File('tool/agent_harness/pubspec.yaml').existsSync(), isTrue);
+      expect(File('docs/architecture/navigation.md').existsSync(), isTrue);
     },
   );
 
@@ -27,6 +28,8 @@ void main() {
 
     expect(pubspecSnippet, contains('bloc_lint:'));
     expect(pubspecSnippet, contains('bloc_tools:'));
+    expect(pubspecSnippet, contains('go_router:'));
+    expect(harnessConfig, contains('authority: bloc_projection'));
     expect(harnessConfig, contains('dart run bloc_tools:bloc lint .'));
   });
 }

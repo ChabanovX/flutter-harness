@@ -5,17 +5,21 @@ import 'package:test/test.dart';
 import '../tool/install_harness.dart' as installer;
 
 void main() {
-  test('resolves intl and Flutter localizations in one Pub transaction', () {
-    expect(installer.applicationDependencyArguments, [
-      'pub',
-      'add',
-      'flutter_bloc',
-      'get_it',
-      'logger',
-      'intl',
-      'flutter_localizations:{sdk: flutter}',
-    ]);
-  });
+  test(
+    'installs navigation and localization dependencies in one Pub transaction',
+    () {
+      expect(installer.applicationDependencyArguments, [
+        'pub',
+        'add',
+        'flutter_bloc',
+        'go_router',
+        'get_it',
+        'logger',
+        'intl',
+        'flutter_localizations:{sdk: flutter}',
+      ]);
+    },
+  );
 
   test('renders a launcher that targets the harness submodule package', () {
     final launcher = installer.renderSubmoduleLauncher(
@@ -72,7 +76,8 @@ formatter:
   test('rewrites AGENTS documentation paths to the submodule', () {
     final rendered = installer.renderAgentInstructions(
       'Read `docs/architecture/overview.md` and '
-      '`docs/architecture/commenting.md` first.',
+      '`docs/architecture/commenting.md`, then '
+      '`docs/architecture/navigation.md` first.',
       installer.defaultSubmodulePath,
     );
 
@@ -84,6 +89,12 @@ formatter:
       rendered,
       contains(
         '`tool/flutter_agentic_harness/docs/architecture/commenting.md`',
+      ),
+    );
+    expect(
+      rendered,
+      contains(
+        '`tool/flutter_agentic_harness/docs/architecture/navigation.md`',
       ),
     );
   });

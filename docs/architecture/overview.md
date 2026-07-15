@@ -34,6 +34,7 @@ lib/
 │   ├── app.dart
 │   ├── bootstrap/
 │   ├── di/
+│   ├── navigation/
 │   └── router/
 ├── core/
 │   ├── analytics/
@@ -72,7 +73,7 @@ Cubits, immutable states, pages, widgets, and presentation-only coordinators. Pr
 
 ### App
 
-Composition root, router, bootstrap, session wiring, global observers, and process-level lifecycle.
+Composition root, navigation authority, router projection, bootstrap, session wiring, global observers, and process-level lifecycle.
 
 ### Core
 
@@ -84,9 +85,9 @@ Shared public constants live under `core/constants`. UI primitive values that fe
 
 ## Navigation
 
-The router is the source of truth for page location, nested navigation, deep links, restoration, and browser history. Session state may drive redirects. Feature Cubits can emit state that causes the UI to request navigation, but they do not maintain a parallel route stack.
+The default `bloc_projection` model keeps route state/history in a navigation Bloc under `app/navigation`; `app/router` projects that state to pages and URLs. Projects may explicitly opt into `authority: router`, where the router owns location/history directly.
 
-Screen transitions are declared in the app router or another explicit composition root. Route-scoped Cubits are provided there with `BlocProvider`, while feature widgets dispatch typed navigation intent through an app-level navigation contract instead of calling `Navigator.push`, constructing page routes, or using `GoRouter` directly. Local `Navigator.pop`/`maybePop` remains acceptable for closing dialogs, sheets, and other transient UI.
+Both modes keep page/screen construction and Bloc providers in configured app composition paths. Feature presentation declares narrow typed navigation ports, and app composition implements them through the selected authority. Durable Back follows the same intent path. Local `Navigator.pop`/`maybePop` remains acceptable only for transient dialogs, sheets, menus, and overlays. See [navigation.md](navigation.md) for configuration, static enforcement, and required agent review.
 
 ## Dependency injection
 

@@ -67,4 +67,33 @@ Widget buildCatalog() {
     ]);
     expect(skipped, 0);
   });
+
+  test('verify blocks navigation architecture violations', () async {
+    final project = TestProject.create();
+    addTearDown(project.dispose);
+    project.write(
+      'lib/features/catalog/presentation/widgets/catalog_link.dart',
+      '''import 'package:flutter/widgets.dart';
+
+void openCatalog(BuildContext context) {
+  Navigator.pushNamed(context, '/catalog');
+}
+''',
+    );
+
+    final code = await runAgentHarness([
+      '--root',
+      project.root.path,
+      'verify',
+      '--changed',
+      '--skip-format',
+      '--skip-analyze',
+      '--skip-tests',
+      '--skip-quality',
+      '--skip-goldens',
+      '--skip-extra',
+    ]);
+
+    expect(code, 1);
+  });
 }
