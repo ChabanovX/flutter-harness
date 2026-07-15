@@ -2,6 +2,7 @@
 # The harness itself is isolated under tool/agent_harness and is not an app dependency.
 
 dependencies:
+  bloc_concurrency: any
   flutter_bloc: any
   go_router: any
   flutter_localizations:

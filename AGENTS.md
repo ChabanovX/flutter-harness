@@ -46,6 +46,7 @@
 - Use sealed states for load-once/discrete phases.
 - Use one immutable state plus a status enum for forms, search, pagination, optimistic updates, and long-lived live state.
 - Every asynchronous Cubit method must define its concurrency policy: ignore, serialize, restart/latest-wins, or allow overlap.
+- Prefer Bloc with explicit events and `bloc_concurrency` transformers when a Cubit would otherwise implement a private scheduler across multiple asynchronous commands. Retain Cubit for simple method-local guards or when awaitable commands provide a documented product benefit.
 - Guard emissions after asynchronous gaps and cancel subscriptions/timers in `close()`.
 - Avoid Cubit-to-Cubit injection. Prefer repository state, typed update streams, or an explicit presentation coordinator.
 

@@ -11,6 +11,7 @@ void main() {
       expect(installer.applicationDependencyArguments, [
         'pub',
         'add',
+        'bloc_concurrency',
         'flutter_bloc',
         'go_router',
         'get_it',

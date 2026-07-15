@@ -33,6 +33,7 @@ void main() {
 
     expect(pubspecSnippet, contains('bloc_lint:'));
     expect(pubspecSnippet, contains('bloc_tools:'));
+    expect(pubspecSnippet, contains('bloc_concurrency:'));
     expect(pubspecSnippet, contains('go_router:'));
     expect(harnessConfig, contains('authority: bloc_projection'));
     expect(harnessConfig, contains('dart run bloc_tools:bloc lint .'));
@@ -45,6 +46,9 @@ void main() {
     final skillMetadata = File(
       '.agents/skills/harness-review/agents/openai.yaml',
     ).readAsStringSync();
+    final asyncStateRole = File(
+      '.agents/skills/harness-review/references/async-state.md',
+    ).readAsStringSync();
     expect(
       skill,
       contains(
@@ -53,6 +57,8 @@ void main() {
       ),
     );
     expect(skillMetadata, contains('allow_implicit_invocation: false'));
+    expect(asyncStateRole, contains('private queue'));
+    expect(asyncStateRole, contains('global serialization'));
 
     for (final path in installer.harnessCodexRequiredFiles) {
       final content = File(path).readAsStringSync();

@@ -31,6 +31,7 @@ const harnessCodexRequiredFiles = [
 const applicationDependencyArguments = [
   'pub',
   'add',
+  'bloc_concurrency',
   'flutter_bloc',
   'go_router',
   'get_it',
