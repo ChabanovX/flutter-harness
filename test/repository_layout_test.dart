@@ -39,9 +39,19 @@ void main() {
   });
 
   test('ships a managed explicit review skill and read-only custom agents', () {
+    final skill = File(
+      '.agents/skills/harness-review/SKILL.md',
+    ).readAsStringSync();
     final skillMetadata = File(
       '.agents/skills/harness-review/agents/openai.yaml',
     ).readAsStringSync();
+    expect(
+      skill,
+      contains(
+        'If the selected base is `origin/main` and it does not exist, '
+        'use `main`.',
+      ),
+    );
     expect(skillMetadata, contains('allow_implicit_invocation: false'));
 
     for (final path in installer.harnessCodexRequiredFiles) {
