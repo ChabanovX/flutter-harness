@@ -4,6 +4,30 @@ const defaultRepositoryUrl = 'https://github.com/ChabanovX/flutter-harness.git';
 const defaultSubmodulePath = 'tool/flutter_agentic_harness';
 const defaultBranch = 'main';
 const analyzerVersion = '10.2.0';
+const codexAssetManagedMarker = 'flutter-agentic-harness-managed';
+const harnessCodexAssetRoots = [
+  '.agents/skills/harness-review',
+  '.codex/agents',
+];
+const harnessCodexRequiredFiles = [
+  '.agents/skills/harness-review/SKILL.md',
+  '.agents/skills/harness-review/agents/openai.yaml',
+  '.agents/skills/harness-review/references/async-state.md',
+  '.agents/skills/harness-review/references/boundary-flow.md',
+  '.agents/skills/harness-review/references/comments-policy.md',
+  '.agents/skills/harness-review/references/composition.md',
+  '.agents/skills/harness-review/references/finding-verifier.md',
+  '.agents/skills/harness-review/references/review-contract.md',
+  '.agents/skills/harness-review/references/tests-behavior.md',
+  '.agents/skills/harness-review/references/ui-navigation.md',
+  '.codex/agents/harness-async-state.toml',
+  '.codex/agents/harness-boundary-flow.toml',
+  '.codex/agents/harness-comments-policy.toml',
+  '.codex/agents/harness-composition.toml',
+  '.codex/agents/harness-finding-verifier.toml',
+  '.codex/agents/harness-tests-behavior.toml',
+  '.codex/agents/harness-ui-navigation.toml',
+];
 const applicationDependencyArguments = [
   'pub',
   'add',
@@ -142,8 +166,7 @@ final class HarnessInstaller {
     _validateFlutterProject(projectRoot);
     await _validateGitProject(projectRoot);
 
-    final repositoryUrl =
-        options.repositoryUrl ?? await _inferRepositoryUrl(harnessRoot);
+    final repositoryUrl = options.repositoryUrl ?? await _inferRepositoryUrl(harnessRoot);
     await _ensureSubmodule(
       projectRoot: projectRoot,
       repositoryUrl: repositoryUrl,
@@ -236,6 +259,7 @@ final class HarnessInstaller {
       'analysis_options.harness.snippet.yaml',
       'docs/architecture/navigation.md',
       'tool/agent_harness/pubspec.yaml',
+      ...harnessCodexRequiredFiles,
     ];
     for (final path in requiredFiles) {
       if (!File(_join(sourceRoot.path, path)).existsSync()) {
@@ -246,6 +270,7 @@ final class HarnessInstaller {
         );
       }
     }
+    validateHarnessCodexAssets(sourceRoot);
   }
 
   void _writeHarnessFiles({
@@ -276,6 +301,11 @@ final class HarnessInstaller {
     _writeAnalysisOptions(
       File(_join(projectRoot.path, 'analysis_options.yaml')),
       renderAnalysisOptions(options.submodulePath),
+    );
+    installHarnessCodexAssets(
+      projectRoot: projectRoot,
+      sourceRoot: sourceRoot,
+      force: options.force,
     );
   }
 
@@ -337,8 +367,7 @@ final class HarnessInstaller {
       'bloc_lint',
       'bloc_tools',
     ], workingDirectory: projectRoot);
-    if (_usesHarnessAnalysisOptions(projectRoot) &&
-        _hasPubspecDependency(projectRoot, 'flutter_lints')) {
+    if (_usesHarnessAnalysisOptions(projectRoot) && _hasPubspecDependency(projectRoot, 'flutter_lints')) {
       await _run('flutter', const [
         'pub',
         'remove',
@@ -353,6 +382,80 @@ final class HarnessInstaller {
     if (!path.startsWith('$root/')) return path;
     return path.substring(root.length + 1);
   }
+}
+
+void validateHarnessCodexAssets(Directory sourceRoot) {
+  for (final root in harnessCodexAssetRoots) {
+    final directory = Directory(_join(sourceRoot.path, root));
+    if (!directory.existsSync()) {
+      throw InstallException('Harness Codex asset directory is missing: $root.');
+    }
+
+    final files = directory.listSync(recursive: true, followLinks: false).whereType<File>().toList(growable: false);
+    if (files.isEmpty) {
+      throw InstallException('Harness Codex asset directory is empty: $root.');
+    }
+    for (final file in files) {
+      if (!file.readAsStringSync().contains(codexAssetManagedMarker)) {
+        throw InstallException(
+          'Harness Codex asset is missing the managed marker: '
+          '${_relativeToDirectory(file, sourceRoot)}.',
+        );
+      }
+    }
+  }
+}
+
+void installHarnessCodexAssets({
+  required Directory projectRoot,
+  required Directory sourceRoot,
+  required bool force,
+}) {
+  validateHarnessCodexAssets(sourceRoot);
+
+  final sourceFiles = <File>[];
+  for (final root in harnessCodexAssetRoots) {
+    sourceFiles.addAll(
+      Directory(_join(sourceRoot.path, root)).listSync(recursive: true, followLinks: false).whereType<File>(),
+    );
+  }
+  sourceFiles.sort((left, right) => left.path.compareTo(right.path));
+
+  for (final source in sourceFiles) {
+    final relativePath = _relativeToDirectory(source, sourceRoot);
+    _writeManagedCodexAsset(
+      file: File(_join(projectRoot.path, relativePath)),
+      content: source.readAsStringSync(),
+      relativePath: relativePath,
+      force: force,
+    );
+  }
+}
+
+void _writeManagedCodexAsset({
+  required File file,
+  required String content,
+  required String relativePath,
+  required bool force,
+}) {
+  if (file.existsSync()) {
+    final current = file.readAsStringSync();
+    if (current == content) {
+      stdout.writeln('Kept $relativePath.');
+      return;
+    }
+    if (!force && !current.contains(codexAssetManagedMarker)) {
+      stdout.writeln(
+        'Preserved existing unmanaged $relativePath; pass --force to '
+        'overwrite.',
+      );
+      return;
+    }
+  }
+
+  file.parent.createSync(recursive: true);
+  file.writeAsStringSync(content);
+  stdout.writeln('Wrote $relativePath.');
 }
 
 bool isDefaultFlutterAnalysisOptions(String content) {
@@ -527,6 +630,16 @@ String _join(String left, String right) {
     left,
     ...right.split('/'),
   ].where((part) => part.isNotEmpty).join(separator);
+}
+
+String _relativeToDirectory(File file, Directory directory) {
+  final root = directory.absolute.path;
+  final prefix = root.endsWith(Platform.pathSeparator) ? root : '$root${Platform.pathSeparator}';
+  final path = file.absolute.path;
+  if (!path.startsWith(prefix)) {
+    throw InstallException('$path is outside ${directory.path}.');
+  }
+  return _toPosix(path.substring(prefix.length));
 }
 
 String _toPosix(String path) => path.replaceAll(r'\', '/');

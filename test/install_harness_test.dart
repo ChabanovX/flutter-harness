@@ -57,8 +57,7 @@ formatter:
     ], workingDirectory: directory.path);
     expect(pubGet.exitCode, 0, reason: pubGet.stderr.toString());
 
-    final toolDirectory = Directory('${directory.path}/tool')
-      ..createSync(recursive: true);
+    final toolDirectory = Directory('${directory.path}/tool')..createSync(recursive: true);
     File('${toolDirectory.path}/harness.dart').writeAsStringSync(
       installer.renderSubmoduleLauncher(installer.defaultSubmodulePath),
     );
@@ -138,4 +137,219 @@ include: package:very_good_analysis/analysis_options.yaml
       isFalse,
     );
   });
+
+  test('installs Codex assets through the full harness installer', () async {
+    final projectRoot = await Directory.systemTemp.createTemp(
+      'harness_install_project_',
+    );
+    addTearDown(() => projectRoot.deleteSync(recursive: true));
+    File(_join(projectRoot, 'pubspec.yaml')).writeAsStringSync('''
+name: harness_install_fixture
+publish_to: none
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+''');
+    final gitInit = await Process.run(
+      'git',
+      const ['init'],
+      workingDirectory: projectRoot.path,
+    );
+    expect(gitInit.exitCode, 0, reason: gitInit.stderr.toString());
+
+    final submoduleRoot = Directory(
+      _join(projectRoot, installer.defaultSubmodulePath),
+    )..createSync(recursive: true);
+    _copyHarnessInstallFixture(
+      sourceRoot: Directory.current,
+      targetRoot: submoduleRoot,
+    );
+
+    await installer.HarnessInstaller(
+      options: installer.InstallOptions(
+        projectRoot: projectRoot,
+        repositoryUrl: 'unused',
+        submodulePath: installer.defaultSubmodulePath,
+        branch: installer.defaultBranch,
+        force: false,
+        skipPubAdd: true,
+        help: false,
+      ),
+      harnessRoot: Directory.current,
+    ).run();
+
+    for (final path in installer.harnessCodexRequiredFiles) {
+      expect(
+        File(_join(projectRoot, path)).readAsStringSync(),
+        File(_join(submoduleRoot, path)).readAsStringSync(),
+      );
+    }
+  });
+
+  test('installs and refreshes harness-managed Codex assets', () async {
+    final sourceRoot = await Directory.systemTemp.createTemp(
+      'harness_codex_source_',
+    );
+    final projectRoot = await Directory.systemTemp.createTemp(
+      'harness_codex_project_',
+    );
+    addTearDown(() => sourceRoot.deleteSync(recursive: true));
+    addTearDown(() => projectRoot.deleteSync(recursive: true));
+    _writeCodexAssetFixture(sourceRoot, version: 'v1');
+
+    installer.installHarnessCodexAssets(
+      projectRoot: projectRoot,
+      sourceRoot: sourceRoot,
+      force: false,
+    );
+
+    for (final path in installer.harnessCodexRequiredFiles) {
+      expect(File(_join(projectRoot, path)).readAsStringSync(), contains('v1'));
+    }
+
+    _writeCodexAssetFixture(sourceRoot, version: 'v2');
+    installer.installHarnessCodexAssets(
+      projectRoot: projectRoot,
+      sourceRoot: sourceRoot,
+      force: false,
+    );
+
+    for (final path in installer.harnessCodexRequiredFiles) {
+      expect(File(_join(projectRoot, path)).readAsStringSync(), contains('v2'));
+    }
+  });
+
+  test('installs managed Codex assets discovered below managed roots', () async {
+    final sourceRoot = await Directory.systemTemp.createTemp(
+      'harness_codex_source_',
+    );
+    final projectRoot = await Directory.systemTemp.createTemp(
+      'harness_codex_project_',
+    );
+    addTearDown(() => sourceRoot.deleteSync(recursive: true));
+    addTearDown(() => projectRoot.deleteSync(recursive: true));
+    _writeCodexAssetFixture(sourceRoot, version: 'managed');
+    const discoveredPath = '.agents/skills/harness-review/references/future-role.md';
+    final discoveredSource = File(_join(sourceRoot, discoveredPath));
+    discoveredSource.parent.createSync(recursive: true);
+    discoveredSource.writeAsStringSync(
+      '<!-- ${installer.codexAssetManagedMarker} -->\nfuture role\n',
+    );
+
+    installer.installHarnessCodexAssets(
+      projectRoot: projectRoot,
+      sourceRoot: sourceRoot,
+      force: false,
+    );
+
+    expect(
+      File(_join(projectRoot, discoveredPath)).readAsStringSync(),
+      discoveredSource.readAsStringSync(),
+    );
+  });
+
+  test('rejects an unmarked Codex asset discovered below managed roots', () async {
+    final sourceRoot = await Directory.systemTemp.createTemp(
+      'harness_codex_source_',
+    );
+    final projectRoot = await Directory.systemTemp.createTemp(
+      'harness_codex_project_',
+    );
+    addTearDown(() => sourceRoot.deleteSync(recursive: true));
+    addTearDown(() => projectRoot.deleteSync(recursive: true));
+    _writeCodexAssetFixture(sourceRoot, version: 'managed');
+    const unmarkedPath = '.agents/skills/harness-review/references/unmanaged.md';
+    final unmarkedSource = File(_join(sourceRoot, unmarkedPath));
+    unmarkedSource.parent.createSync(recursive: true);
+    unmarkedSource.writeAsStringSync('unmanaged content\n');
+
+    expect(
+      () => installer.installHarnessCodexAssets(
+        projectRoot: projectRoot,
+        sourceRoot: sourceRoot,
+        force: false,
+      ),
+      throwsA(
+        isA<installer.InstallException>().having(
+          (error) => error.message,
+          'message',
+          contains(unmarkedPath),
+        ),
+      ),
+    );
+  });
+
+  test('preserves unmanaged Codex asset collisions unless forced', () async {
+    final sourceRoot = await Directory.systemTemp.createTemp(
+      'harness_codex_source_',
+    );
+    final projectRoot = await Directory.systemTemp.createTemp(
+      'harness_codex_project_',
+    );
+    addTearDown(() => sourceRoot.deleteSync(recursive: true));
+    addTearDown(() => projectRoot.deleteSync(recursive: true));
+    _writeCodexAssetFixture(sourceRoot, version: 'managed');
+
+    final collisionPath = installer.harnessCodexRequiredFiles.first;
+    final collision = File(_join(projectRoot, collisionPath));
+    collision.parent.createSync(recursive: true);
+    collision.writeAsStringSync('user-owned content\n');
+
+    installer.installHarnessCodexAssets(
+      projectRoot: projectRoot,
+      sourceRoot: sourceRoot,
+      force: false,
+    );
+    expect(collision.readAsStringSync(), 'user-owned content\n');
+
+    installer.installHarnessCodexAssets(
+      projectRoot: projectRoot,
+      sourceRoot: sourceRoot,
+      force: true,
+    );
+    expect(collision.readAsStringSync(), contains('managed'));
+    expect(
+      collision.readAsStringSync(),
+      contains(installer.codexAssetManagedMarker),
+    );
+  });
+}
+
+void _writeCodexAssetFixture(Directory sourceRoot, {required String version}) {
+  for (final path in installer.harnessCodexRequiredFiles) {
+    final file = File(_join(sourceRoot, path));
+    file.parent.createSync(recursive: true);
+    file.writeAsStringSync(
+      '# ${installer.codexAssetManagedMarker}\n$version $path\n',
+    );
+  }
+}
+
+void _copyHarnessInstallFixture({
+  required Directory sourceRoot,
+  required Directory targetRoot,
+}) {
+  const baseFiles = [
+    'AGENTS.md',
+    '.agent_harness.yaml',
+    '.agent_harness/baseline.json',
+    'analysis_options.harness.snippet.yaml',
+    'tool/agent_harness/pubspec.yaml',
+  ];
+  for (final path in [...baseFiles, ...installer.harnessCodexRequiredFiles]) {
+    final target = File(_join(targetRoot, path));
+    target.parent.createSync(recursive: true);
+    File(_join(sourceRoot, path)).copySync(target.path);
+  }
+}
+
+String _join(Directory root, String relativePath) {
+  return [
+    root.path,
+    ...relativePath.split('/'),
+  ].join(Platform.pathSeparator);
 }

@@ -35,6 +35,7 @@ By default, the installer:
 - adds this repository as a submodule at `tool/flutter_agentic_harness`;
 - writes a project-local `tool/harness.dart` launcher that delegates to the submodule;
 - writes `AGENTS.md`, `.agent_harness.yaml`, `.agent_harness/baseline.json`, and `analysis_options.yaml`;
+- installs the explicit `$harness-review` skill and its read-only custom agents under `.agents/skills` and `.codex/agents`;
 - runs `flutter pub add flutter_bloc go_router get_it logger intl "flutter_localizations:{sdk: flutter}"`;
 - runs `flutter pub add --dev very_good_analysis:10.2.0 assetify alchemist bloc_lint bloc_tools`.
 
@@ -57,12 +58,16 @@ dart run tool/harness.dart verify --all
 
 The launcher performs `dart pub get` inside the submodule's `tool/agent_harness` package on first use or after that package's `pubspec.yaml` changes.
 
+Rerun the installer after updating the submodule to refresh harness-managed Codex assets. Files carrying the harness managed marker update automatically; an existing file without that marker is preserved unless `--force` is passed. The installer never deletes project-local Codex assets, including managed files removed from a later harness version.
+
 ## Manual copy install
 
 If submodules are not appropriate, copy these paths into the project root:
 
 ```text
 AGENTS.md
+.agents/
+.codex/
 .agent_harness.yaml
 .agent_harness/
 docs/
@@ -114,7 +119,9 @@ dart run tool/harness.dart golden --update
 dart run tool/harness.dart scaffold feature notifications --entity notification
 ```
 
-The scaffolder creates domain, application, data, presentation, DI-registration, and test files. Generated pages read copy from `AppLocalizations` and spacing from the design token extension. It does not invent the concrete HTTP implementation or edit navigation composition automatically; those are intentionally explicit integration steps. Shared constants belong in `core/constants`, while file-local constants stay private next to their usage. Feature UI dispatches typed navigation intent; app composition owns page/provider construction for normal pages, fullscreen routes, sidebar, bottom navigation, and navigation rail.
+The scaffolder creates domain, application, data, presentation, DI-registration, and test files. Generated pages read copy from `AppLocalizations` and spacing from the design token extension. It does not invent the concrete HTTP implementation or edit the router automatically; those are intentionally explicit integration steps. Shared constants belong in `core/constants`, while file-local constants stay private next to their usage. Screen navigation belongs in the router/composition layer: feature UI should dispatch typed navigation intent instead of constructing routes or calling `Navigator.push`/`GoRouter` directly.
+
+Invoke `$harness-review` explicitly when a branch or working tree needs a semantic review against the harness contract. The skill runs changed-scope verification, selects only the relevant boundary, async-state, UI/navigation, test, composition, and comment-policy reviewers, and independently verifies candidate findings. Review agents are read-only and do not modify the application.
 
 ## Harness self-checks
 
