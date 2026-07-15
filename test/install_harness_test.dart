@@ -338,6 +338,7 @@ void _copyHarnessInstallFixture({
     '.agent_harness.yaml',
     '.agent_harness/baseline.json',
     'analysis_options.harness.snippet.yaml',
+    'docs/architecture/navigation.md',
     'tool/agent_harness/pubspec.yaml',
   ];
   for (final path in [...baseFiles, ...installer.harnessCodexRequiredFiles]) {
