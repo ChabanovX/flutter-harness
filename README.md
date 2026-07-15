@@ -35,8 +35,7 @@ By default, the installer:
 - adds this repository as a submodule at `tool/flutter_agentic_harness`;
 - writes a project-local `tool/harness.dart` launcher that delegates to the submodule;
 - writes `AGENTS.md`, `.agent_harness.yaml`, `.agent_harness/baseline.json`, and `analysis_options.yaml`;
-- runs `flutter pub add flutter_bloc get_it logger intl`;
-- runs `flutter pub add flutter_localizations --sdk=flutter`;
+- runs `flutter pub add flutter_bloc get_it logger intl "flutter_localizations:{sdk: flutter}"`;
 - runs `flutter pub add --dev very_good_analysis:10.2.0 assetify alchemist bloc_lint bloc_tools`.
 
 Useful options:

@@ -5,6 +5,18 @@ import 'package:test/test.dart';
 import '../tool/install_harness.dart' as installer;
 
 void main() {
+  test('resolves intl and Flutter localizations in one Pub transaction', () {
+    expect(installer.applicationDependencyArguments, [
+      'pub',
+      'add',
+      'flutter_bloc',
+      'get_it',
+      'logger',
+      'intl',
+      'flutter_localizations:{sdk: flutter}',
+    ]);
+  });
+
   test('renders a launcher that targets the harness submodule package', () {
     final launcher = installer.renderSubmoduleLauncher(
       installer.defaultSubmodulePath,

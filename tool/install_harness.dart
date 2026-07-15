@@ -4,6 +4,15 @@ const defaultRepositoryUrl = 'https://github.com/ChabanovX/flutter-harness.git';
 const defaultSubmodulePath = 'tool/flutter_agentic_harness';
 const defaultBranch = 'main';
 const analyzerVersion = '10.2.0';
+const applicationDependencyArguments = [
+  'pub',
+  'add',
+  'flutter_bloc',
+  'get_it',
+  'logger',
+  'intl',
+  'flutter_localizations:{sdk: flutter}',
+];
 
 Future<void> main(List<String> arguments) async {
   try {
@@ -311,20 +320,11 @@ final class HarnessInstaller {
   }
 
   Future<void> _addApplicationDependencies(Directory projectRoot) async {
-    await _run('flutter', const [
-      'pub',
-      'add',
-      'flutter_bloc',
-      'get_it',
-      'logger',
-      'intl',
-    ], workingDirectory: projectRoot);
-    await _run('flutter', const [
-      'pub',
-      'add',
-      'flutter_localizations',
-      '--sdk=flutter',
-    ], workingDirectory: projectRoot);
+    await _run(
+      'flutter',
+      applicationDependencyArguments,
+      workingDirectory: projectRoot,
+    );
     await _run('flutter', const [
       'pub',
       'add',
