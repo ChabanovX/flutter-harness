@@ -275,73 +275,120 @@ Padding(
 
 The next patterns can compile and may satisfy deterministic checks. Explicitly invoke [`$harness-review`](.agents/skills/harness-review/SKILL.md) to inspect their behavior; verified findings require correction even when `verify --changed` passes.
 
-#### Preserve failure semantics at the repository boundary
+The skill selects only the review agents relevant to the changed paths:
 
-Rejected in review: the repository disguises programming errors and collapses every operational failure into the same result.
+| Agent | Review focus |
+|---|---|
+| `harness-boundary-flow` | DTO and domain flow, repository contracts, failure normalization, cache ownership, and cross-feature boundaries |
+| `harness-async-state` | Concurrency policy, stale results, lifecycle guards, cleanup, and immutable state publication |
+| `harness-ui-navigation` | Pure widget builds, UI state coverage, typed intent, router authority, and provider lifetime |
+| `harness-tests-behavior` | Behavior matrices, repository-boundary coverage, race tests, widget scenarios, and deterministic tests |
+| `harness-composition` | DI placement, dependency ownership, startup and shutdown, registration reachability, and adapter lifetime |
+| `harness-comments-policy` | Dartdoc, rationale comments, TODOs, suppressions, commented-out code, and localization metadata |
+| `harness-finding-verifier` | Accepts, rejects, merges, or reclassifies candidate findings before they reach the final report |
+
+The first six agents are selected from the diff. `harness-finding-verifier` runs only when they produce candidate findings.
+
+#### Separate dependency registration from runtime startup
+
+Reviewed by `harness-composition`.
+
+Rejected in review: DI registration starts a listener and mixes graph construction with runtime side effects. Shutdown ownership is also unclear.
 
 ```dart
-Future<AppResult<CatalogItem>> loadItem(String id) async {
-  try {
-    final dto = await _remoteDataSource.loadItem(id);
-    return AppSuccess(_mapper.toDomain(dto));
-  } catch (_) {
-    return const AppError(UnexpectedFailure());
-  }
+Future<AppRuntime> configureDependencies() async {
+  final sync = CatalogSyncController(
+    appDependencies<CatalogRepository>(),
+  );
+  await sync.start();
+  appDependencies.registerSingleton(sync);
+  return AppRuntime(catalogSync: sync);
 }
 ```
 
-Write this instead: rethrow Dart `Error`s and normalize operational transport or persistence failures through the configured mapper.
+Write this instead: registration constructs the graph, bootstrap starts it explicitly, and the runtime exposes matching shutdown ownership.
 
 ```dart
-Future<AppResult<CatalogItem>> loadItem(String id) async {
-  try {
-    final dto = await _remoteDataSource.loadItem(id);
-    return AppSuccess(_mapper.toDomain(dto));
-  } catch (error, stackTrace) {
-    if (error is Error) rethrow;
-    return AppError(_failureMapper.map(error, stackTrace));
-  }
+AppRuntime configureDependencies() {
+  final runtime = AppRuntime(
+    catalogSync: CatalogSyncController(
+      appDependencies<CatalogRepository>(),
+    ),
+  );
+  appDependencies.registerSingleton(runtime);
+  return runtime;
 }
+
+Future<AppRuntime> bootstrap() async {
+  final runtime = configureDependencies();
+  await runtime.start();
+  return runtime;
+}
+
+Future<void> shutdown(AppRuntime runtime) => runtime.close();
 ```
 
-#### Make the concurrency policy prevent stale state
+#### Serialize mutations across event types
 
-Rejected in review: `isClosed` protects lifecycle only. With concurrent search handlers, an older response can still overwrite a newer query.
+Reviewed by `harness-async-state`.
+
+Rejected in review: each `sequential()` transformer owns a separate event-type bucket, so save and delete operations may still overlap and complete out of order.
 
 ```dart
-on<SearchQueryChanged>(
-  _onQueryChanged,
-  transformer: concurrent(),
+on<SaveRequested>(
+  _onSave,
+  transformer: sequential(),
+);
+on<DeleteRequested>(
+  _onDelete,
+  transformer: sequential(),
+);
+```
+
+Write this instead: route mutually exclusive mutations through one shared event superclass and one serialized bucket.
+
+```dart
+sealed class CatalogMutation extends CatalogEvent {
+  const CatalogMutation();
+}
+
+final class SaveRequested extends CatalogMutation {
+  const SaveRequested(this.item);
+  final CatalogItem item;
+}
+
+final class DeleteRequested extends CatalogMutation {
+  const DeleteRequested(this.id);
+  final String id;
+}
+
+// Concurrency policy: all catalog mutations share one serialized event bucket.
+on<CatalogMutation>(
+  _onMutation,
+  transformer: sequential(),
 );
 
-Future<void> _onQueryChanged(
-  SearchQueryChanged event,
-  Emitter<SearchState> emit,
+Future<void> _onMutation(
+  CatalogMutation event,
+  Emitter<CatalogState> emit,
 ) async {
-  emit(state.copyWith(status: SearchStatus.loading, query: event.query));
-  final result = await _repository.search(event.query);
+  final result = switch (event) {
+    SaveRequested(:final item) => await _repository.save(item),
+    DeleteRequested(:final id) => await _repository.delete(id),
+  };
   if (emit.isDone) return;
-  emit(state.copyWith(status: SearchStatus.success, items: result));
-}
-```
 
-Write this instead: choose and document latest-wins behavior explicitly. `restartable()` prevents the canceled handler from publishing stale state; the underlying operation must also support cancellation when its side effects require it.
-
-```dart
-// Concurrency policy: latest query wins; canceled handlers cannot emit results.
-on<SearchQueryChanged>(
-  _onQueryChanged,
-  transformer: restartable(),
-);
-
-Future<void> _onQueryChanged(
-  SearchQueryChanged event,
-  Emitter<SearchState> emit,
-) async {
-  emit(state.copyWith(status: SearchStatus.loading, query: event.query));
-  final result = await _repository.search(event.query);
-  if (emit.isDone) return;
-  emit(state.copyWith(status: SearchStatus.success, items: result));
+  switch (result) {
+    case AppSuccess<void>():
+      emit(state.copyWith(mutationStatus: MutationStatus.success));
+    case AppError<void>(:final failure):
+      emit(
+        state.copyWith(
+          mutationStatus: MutationStatus.failure,
+          failure: failure,
+        ),
+      );
+  }
 }
 ```
 
