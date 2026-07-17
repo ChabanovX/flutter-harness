@@ -123,6 +123,228 @@ The scaffolder creates domain, application, data, presentation, DI-registration,
 
 Invoke `$harness-review` explicitly when a branch or working tree needs a semantic review against the harness contract. The skill runs changed-scope verification, selects only the relevant boundary, async-state, UI/navigation, test, composition, and comment-policy reviewers, and independently verifies candidate findings. Review agents are read-only and do not modify the application.
 
+## Rejected code and expected replacements
+
+The harness does not rewrite application code. Enforcement happens in two stages:
+
+1. `dart run tool/harness.dart verify --changed` deterministically rejects analyzer, architecture, quality, and test failures.
+2. `$harness-review` runs that preflight and then reports semantic defects that static analysis cannot prove. A clean preflight is not a substitute for a clean review.
+
+The following examples show the shape an agent should write instead of preserving a rejected pattern. Full rules live in [dependency rules](docs/architecture/dependency_rules.md), [error policy](docs/architecture/error_policy.md), [navigation architecture](docs/architecture/navigation.md), and [state patterns](docs/architecture/state_patterns.md).
+
+### Static checks
+
+#### Keep infrastructure and DTOs out of presentation
+
+Rejected: presentation depends directly on Dio and a data-layer DTO.
+
+```dart
+import 'package:dio/dio.dart';
+import 'package:example/features/catalog/data/dto/catalog_item_dto.dart';
+
+final class CatalogCubit extends Cubit<CatalogState> {
+  CatalogCubit(this._dio) : super(const CatalogInitial());
+
+  final Dio _dio;
+
+  Future<void> load() async {
+    final response = await _dio.get<Map<String, Object?>>('/catalog');
+    emit(CatalogLoaded(CatalogItemDto.fromJson(response.data!)));
+  }
+}
+```
+
+Write this instead: presentation depends on an application operation and receives domain values wrapped in the shared result contract. DTO parsing, mapping, and transport calls stay in `data/`.
+
+```dart
+final class CatalogCubit extends Cubit<CatalogState> {
+  CatalogCubit({required LoadCatalog loadCatalog})
+    : _loadCatalog = loadCatalog,
+      super(const CatalogInitial());
+
+  final LoadCatalog _loadCatalog;
+  bool _loading = false;
+
+  Future<void> load() async {
+    // Concurrency policy: ignore overlapping loads while one is in flight.
+    if (_loading) return;
+    _loading = true;
+    emit(const CatalogLoading());
+
+    try {
+      final result = await _loadCatalog();
+      if (isClosed) return;
+
+      switch (result) {
+        case AppSuccess<List<CatalogItem>>(:final value):
+          emit(
+            value.isEmpty
+                ? const CatalogEmpty()
+                : CatalogLoaded(value),
+          );
+        case AppError<List<CatalogItem>>(:final failure):
+          emit(CatalogFailure(failure));
+      }
+    } finally {
+      _loading = false;
+    }
+  }
+}
+```
+
+#### Keep navigation and dependency construction in app composition
+
+Rejected: feature presentation locates its dependency, constructs a provider, and calls the router directly.
+
+```dart
+return BlocProvider.value(
+  value: getIt<CatalogCubit>(),
+  child: ProductPage(
+    onOpen: (productId) => context.go('/products/$productId'),
+  ),
+);
+```
+
+Write this instead: the feature emits typed navigation intent, while an approved app router/provider factory resolves dependencies and constructs the page. The app-side implementation of the port delegates to the configured navigation authority.
+
+```dart
+abstract interface class CatalogNavigation {
+  void openProduct(String productId);
+}
+
+FilledButton(
+  onPressed: () => navigation.openProduct(product.id),
+  child: Text(localizations.openProductAction),
+);
+
+// Under app/router or another configured composition path.
+BlocProvider(
+  create: (_) => appDependencies<CatalogCubit>(),
+  child: ProductPage(productId: productId),
+);
+```
+
+#### Use localization, generated assets, design tokens, and the logging facade
+
+Rejected: UI and logging behavior are encoded as raw literals.
+
+```dart
+Padding(
+  padding: const EdgeInsets.all(16),
+  child: FilledButton(
+    onPressed: () {
+      print('retry requested');
+      onRetry();
+    },
+    child: Row(
+      children: [
+        Image.asset('assets/images/retry.png'),
+        const Text('Retry'),
+      ],
+    ),
+  ),
+);
+```
+
+Write this instead: UI copy, visual values, asset paths, and logs use their project-owned contracts.
+
+```dart
+final AppLogger _logger = AppLogger('CatalogPage');
+
+final localizations = AppLocalizations.of(context);
+final spacing = Theme.of(context).extension<AppSpacing>()!;
+
+Padding(
+  padding: spacing.page,
+  child: FilledButton(
+    onPressed: () {
+      _logger.i('Retry requested');
+      onRetry();
+    },
+    child: Row(
+      children: [
+        Image.asset(Assets.retry),
+        Text(localizations.retryAction),
+      ],
+    ),
+  ),
+);
+```
+
+### Agent review checks
+
+The next patterns can compile and may satisfy deterministic checks. Explicitly invoke [`$harness-review`](.agents/skills/harness-review/SKILL.md) to inspect their behavior; verified findings require correction even when `verify --changed` passes.
+
+#### Preserve failure semantics at the repository boundary
+
+Rejected in review: the repository disguises programming errors and collapses every operational failure into the same result.
+
+```dart
+Future<AppResult<CatalogItem>> loadItem(String id) async {
+  try {
+    final dto = await _remoteDataSource.loadItem(id);
+    return AppSuccess(_mapper.toDomain(dto));
+  } catch (_) {
+    return const AppError(UnexpectedFailure());
+  }
+}
+```
+
+Write this instead: rethrow Dart `Error`s and normalize operational transport or persistence failures through the configured mapper.
+
+```dart
+Future<AppResult<CatalogItem>> loadItem(String id) async {
+  try {
+    final dto = await _remoteDataSource.loadItem(id);
+    return AppSuccess(_mapper.toDomain(dto));
+  } catch (error, stackTrace) {
+    if (error is Error) rethrow;
+    return AppError(_failureMapper.map(error, stackTrace));
+  }
+}
+```
+
+#### Make the concurrency policy prevent stale state
+
+Rejected in review: `isClosed` protects lifecycle only. With concurrent search handlers, an older response can still overwrite a newer query.
+
+```dart
+on<SearchQueryChanged>(
+  _onQueryChanged,
+  transformer: concurrent(),
+);
+
+Future<void> _onQueryChanged(
+  SearchQueryChanged event,
+  Emitter<SearchState> emit,
+) async {
+  emit(state.copyWith(status: SearchStatus.loading, query: event.query));
+  final result = await _repository.search(event.query);
+  if (emit.isDone) return;
+  emit(state.copyWith(status: SearchStatus.success, items: result));
+}
+```
+
+Write this instead: choose and document latest-wins behavior explicitly. `restartable()` prevents the canceled handler from publishing stale state; the underlying operation must also support cancellation when its side effects require it.
+
+```dart
+// Concurrency policy: latest query wins; canceled handlers cannot emit results.
+on<SearchQueryChanged>(
+  _onQueryChanged,
+  transformer: restartable(),
+);
+
+Future<void> _onQueryChanged(
+  SearchQueryChanged event,
+  Emitter<SearchState> emit,
+) async {
+  emit(state.copyWith(status: SearchStatus.loading, query: event.query));
+  final result = await _repository.search(event.query);
+  if (emit.isDone) return;
+  emit(state.copyWith(status: SearchStatus.success, items: result));
+}
+```
+
 ## Harness self-checks
 
 The repository root is a lightweight Dart package for analyzer configuration and repository-level commands:
