@@ -7,7 +7,6 @@ final class FeatureTemplates {
     required this.stateStyle,
     required this.featurePackageRoot,
     required this.sharedDomainPackageRoot,
-    required this.failureMapperPackagePath,
     required this.designTokensPackagePath,
     required this.localizationsPackagePath,
     required this.localizationsClass,
@@ -18,7 +17,6 @@ final class FeatureTemplates {
   final String stateStyle;
   final String featurePackageRoot;
   final String sharedDomainPackageRoot;
-  final String failureMapperPackagePath;
   final String designTokensPackagePath;
   final String localizationsPackagePath;
   final String localizationsClass;
@@ -104,6 +102,18 @@ abstract final class ${naming.entityPascal}Mapper {
 }
 ''';
 
+  String get failureMapper =>
+      '''import 'package:$packageName/$sharedDomainPackageRoot/app_failure.dart';
+
+/// Normalizes operational failures for the ${naming.featurePascal} data boundary.
+abstract final class ${naming.featurePascal}FailureMapper {
+  /// Converts [error] into an application failure.
+  static AppFailure map(Object error, StackTrace stackTrace) {
+    return UnexpectedFailure(cause: error, stackTrace: stackTrace);
+  }
+}
+''';
+
   String get dataSource =>
       '''import 'package:$packageName/$featurePackageRoot/data/dto/${naming.entitySnake}_dto.dart';
 
@@ -113,10 +123,10 @@ abstract interface class ${naming.featurePascal}RemoteDataSource {
 ''';
 
   String get repositoryImplementation =>
-      '''import 'package:$packageName/$failureMapperPackagePath';
-import 'package:$packageName/$featurePackageRoot/application/ports/${naming.featureSnake}_repository.dart';
+      '''import 'package:$packageName/$featurePackageRoot/application/ports/${naming.featureSnake}_repository.dart';
 import 'package:$packageName/$featurePackageRoot/data/datasources/${naming.featureSnake}_remote_data_source.dart';
 import 'package:$packageName/$featurePackageRoot/data/mappers/${naming.entitySnake}_mapper.dart';
+import 'package:$packageName/$featurePackageRoot/data/mappers/${naming.featureSnake}_failure_mapper.dart';
 import 'package:$packageName/$featurePackageRoot/domain/entities/${naming.entitySnake}.dart';
 import 'package:$packageName/$sharedDomainPackageRoot/app_result.dart';
 
@@ -124,12 +134,9 @@ final class ${naming.featurePascal}RepositoryImpl
     implements ${naming.featurePascal}Repository {
   const ${naming.featurePascal}RepositoryImpl({
     required ${naming.featurePascal}RemoteDataSource remoteDataSource,
-    required FailureMapper failureMapper,
-  })  : _remoteDataSource = remoteDataSource,
-        _failureMapper = failureMapper;
+  }) : _remoteDataSource = remoteDataSource;
 
   final ${naming.featurePascal}RemoteDataSource _remoteDataSource;
-  final FailureMapper _failureMapper;
 
   @override
   Future<AppResult<List<${naming.entityPascal}>>> get${naming.featurePascal}() async {
@@ -141,7 +148,9 @@ final class ${naming.featurePascal}RepositoryImpl
       return AppSuccess(List.unmodifiable(items));
     } catch (error, stackTrace) {
       if (error is Error) rethrow;
-      return AppError(_failureMapper.map(error, stackTrace));
+      return AppError(
+        ${naming.featurePascal}FailureMapper.map(error, stackTrace),
+      );
     }
   }
 }
@@ -155,7 +164,6 @@ final class ${naming.featurePascal}RepositoryImpl
 
   String get diModule =>
       '''import 'package:get_it/get_it.dart';
-import 'package:$packageName/$failureMapperPackagePath';
 import 'package:$packageName/$featurePackageRoot/application/ports/${naming.featureSnake}_repository.dart';
 import 'package:$packageName/$featurePackageRoot/application/queries/get_${naming.featureSnake}.dart';
 import 'package:$packageName/$featurePackageRoot/data/datasources/${naming.featureSnake}_remote_data_source.dart';
@@ -169,17 +177,10 @@ void register${naming.featurePascal}Module(GetIt getIt) {
       'register${naming.featurePascal}Module().',
     );
   }
-  if (!getIt.isRegistered<FailureMapper>()) {
-    throw StateError(
-      'Register FailureMapper in the core DI module first.',
-    );
-  }
-
   if (!getIt.isRegistered<${naming.featurePascal}Repository>()) {
     getIt.registerLazySingleton<${naming.featurePascal}Repository>(
       () => ${naming.featurePascal}RepositoryImpl(
         remoteDataSource: getIt(),
-        failureMapper: getIt(),
       ),
     );
   }
@@ -195,6 +196,28 @@ void register${naming.featurePascal}Module(GetIt getIt) {
       ),
     );
   }
+}
+''';
+
+  String get failureMapperTest =>
+      '''import 'package:flutter_test/flutter_test.dart';
+import 'package:$packageName/$featurePackageRoot/data/mappers/${naming.featureSnake}_failure_mapper.dart';
+import 'package:$packageName/$sharedDomainPackageRoot/app_failure.dart';
+
+void main() {
+  test('normalizes unknown operational errors as unexpected failures', () {
+    final error = Exception('adapter failed');
+    final stackTrace = StackTrace.current;
+
+    final failure = ${naming.featurePascal}FailureMapper.map(
+      error,
+      stackTrace,
+    );
+
+    expect(failure, isA<UnexpectedFailure>());
+    expect(failure.cause, same(error));
+    expect(failure.stackTrace, same(stackTrace));
+  });
 }
 ''';
 
@@ -253,7 +276,6 @@ final class _Fake${naming.featurePascal}Repository
 
   String get repositoryTest =>
       '''import 'package:flutter_test/flutter_test.dart';
-import 'package:$packageName/$failureMapperPackagePath';
 import 'package:$packageName/$featurePackageRoot/data/datasources/${naming.featureSnake}_remote_data_source.dart';
 import 'package:$packageName/$featurePackageRoot/data/dto/${naming.entitySnake}_dto.dart';
 import 'package:$packageName/$featurePackageRoot/data/repositories/${naming.featureSnake}_repository_impl.dart';
@@ -265,7 +287,6 @@ void main() {
   test('maps DTOs through the real repository boundary', () async {
     final repository = ${naming.featurePascal}RepositoryImpl(
       remoteDataSource: _FakeDataSource.success(),
-      failureMapper: const _NetworkFailureMapper(),
     );
 
     final result = await repository.get${naming.featurePascal}();
@@ -276,16 +297,17 @@ void main() {
   });
 
   test('normalizes datasource errors before they leave data', () async {
+    final error = Exception('adapter failed');
     final repository = ${naming.featurePascal}RepositoryImpl(
-      remoteDataSource: _FakeDataSource.failure(Exception('offline')),
-      failureMapper: const _NetworkFailureMapper(),
+      remoteDataSource: _FakeDataSource.failure(error),
     );
 
     final result = await repository.get${naming.featurePascal}();
 
     expect(result, isA<AppError<List<${naming.entityPascal}>>>());
     final failure = (result as AppError<List<${naming.entityPascal}>>).failure;
-    expect(failure, isA<NetworkFailure>());
+    expect(failure, isA<UnexpectedFailure>());
+    expect(failure.cause, same(error));
   });
 }
 
@@ -303,15 +325,6 @@ final class _FakeDataSource implements ${naming.featurePascal}RemoteDataSource {
     return const [
       ${naming.entityPascal}Dto(id: 'id-1', title: 'Example'),
     ];
-  }
-}
-
-final class _NetworkFailureMapper implements FailureMapper {
-  const _NetworkFailureMapper();
-
-  @override
-  AppFailure map(Object error, StackTrace stackTrace) {
-    return NetworkFailure(cause: error, stackTrace: stackTrace);
   }
 }
 ''';

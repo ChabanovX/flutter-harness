@@ -28,7 +28,7 @@ void main() {
       generateWidgetTest: true,
     );
 
-    expect(first.written, hasLength(16));
+    expect(first.written, hasLength(18));
     expect(first.skipped, isEmpty);
     final repositoryFile = File(
       p.join(
@@ -38,10 +38,34 @@ void main() {
       ),
     );
     expect(repositoryFile.existsSync(), isTrue);
+    final repositorySource = repositoryFile.readAsStringSync();
     expect(
-      repositoryFile.readAsStringSync(),
+      repositorySource,
       contains("package:demo_app/shared/domain/app_result.dart"),
     );
+    expect(
+      repositorySource,
+      contains('NotificationsFailureMapper.map(error, stackTrace)'),
+    );
+    expect(repositorySource, isNot(contains('FailureMapper failureMapper')));
+
+    final failureMapperSource = File(
+      p.join(
+        project.root.path,
+        'lib/features/notifications/data/mappers/'
+        'notifications_failure_mapper.dart',
+      ),
+    ).readAsStringSync();
+    expect(
+      failureMapperSource,
+      contains('abstract final class NotificationsFailureMapper'),
+    );
+    expect(failureMapperSource, contains('static AppFailure map('));
+
+    final diSource = File(
+      p.join(project.root.path, 'lib/app/di/notifications_module.dart'),
+    ).readAsStringSync();
+    expect(diSource, isNot(contains('FailureMapper')));
 
     final second = scaffolder.scaffold(
       naming: naming,
@@ -52,7 +76,7 @@ void main() {
       generateWidgetTest: true,
     );
     expect(second.written, isEmpty);
-    expect(second.skipped, hasLength(16));
+    expect(second.skipped, hasLength(18));
   });
 
   test('uses configured roots in paths and imports', () {
@@ -77,16 +101,36 @@ void main() {
       generateWidgetTest: false,
     );
 
+    expect(result.written, contains('lib/src/app/di/catalog_module.dart'));
     expect(
       result.written,
-      contains('lib/src/app/di/catalog_module.dart'),
+      contains(
+        'lib/src/modules/catalog/data/mappers/catalog_failure_mapper.dart',
+      ),
     );
-    final repository = File(
+    final repositoryPort = File(
       p.join(
         project.root.path,
         'lib/src/modules/catalog/application/ports/catalog_repository.dart',
       ),
     ).readAsStringSync();
-    expect(repository, contains('package:demo_app/src/shared/domain/app_result.dart'));
+    expect(
+      repositoryPort,
+      contains('package:demo_app/src/shared/domain/app_result.dart'),
+    );
+    final repositoryImplementation = File(
+      p.join(
+        project.root.path,
+        'lib/src/modules/catalog/data/repositories/'
+        'catalog_repository_impl.dart',
+      ),
+    ).readAsStringSync();
+    expect(
+      repositoryImplementation,
+      contains(
+        'package:demo_app/src/modules/catalog/data/mappers/'
+        'catalog_failure_mapper.dart',
+      ),
+    );
   });
 }

@@ -29,10 +29,6 @@ final class InitCommand extends Command<int> {
     final sharedDomainRoot = project.sharedDomainRoot;
     final failurePath = p.posix.join(sharedDomainRoot, 'app_failure.dart');
     final resultPath = p.posix.join(sharedDomainRoot, 'app_result.dart');
-    final failureMapperPath = p.posix.join(
-      project.coreRoot,
-      'errors/failure_mapper.dart',
-    );
     final constantsRoot = p.posix.join(project.coreRoot, 'constants');
     final designRoot = p.posix.join(project.coreRoot, 'design_system');
     final tokensRoot = p.posix.join(designRoot, 'tokens');
@@ -44,17 +40,9 @@ final class InitCommand extends Command<int> {
       sharedDomainRoot,
       'error_reporter.dart',
     );
-    final failureImport =
-        'package:${context.config.packageName}/'
-        '${project.packagePath(failurePath)}';
-
     final files = <String, String>{
       failurePath: _appFailureTemplate,
       resultPath: _appResultTemplate,
-      failureMapperPath: _failureMapperTemplate.replaceAll(
-        '{{failure_import}}',
-        failureImport,
-      ),
       p.posix.join(constantsRoot, 'ui_constants.dart'): _uiConstantsTemplate,
       p.posix.join(constantsRoot, 'network_constants.dart'): _networkConstantsTemplate,
       p.posix.join(designRoot, 'app_theme.dart'): _appThemeTemplate,
@@ -107,14 +95,16 @@ final class InitCommand extends Command<int> {
       p.posix.join(project.coreRoot, 'storage'),
       project.featureRoot,
     ]) {
-      Directory(p.join(context.root.path, directory)).createSync(recursive: true);
+      Directory(
+        p.join(context.root.path, directory),
+      ).createSync(recursive: true);
     }
 
     if (writtenDartPaths.isNotEmpty) {
-      final formatCode = await context.executor.run(
-        'dart',
-        ['format', ...writtenDartPaths],
-      );
+      final formatCode = await context.executor.run('dart', [
+        'format',
+        ...writtenDartPaths,
+      ]);
       if (formatCode != 0) {
         context.console.error('Initialized Dart files could not be formatted.');
         return formatCode;
@@ -251,22 +241,6 @@ final class Unit {
   const Unit._();
 
   static const value = Unit._();
-}
-''';
-
-const _failureMapperTemplate = r'''import '{{failure_import}}';
-
-abstract interface class FailureMapper {
-  AppFailure map(Object error, StackTrace stackTrace);
-}
-
-final class DefaultFailureMapper implements FailureMapper {
-  const DefaultFailureMapper();
-
-  @override
-  AppFailure map(Object error, StackTrace stackTrace) {
-    return UnexpectedFailure(cause: error, stackTrace: stackTrace);
-  }
 }
 ''';
 

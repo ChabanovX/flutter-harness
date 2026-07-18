@@ -331,27 +331,30 @@ String _formatLabel(String value) => value;
       expect(rules, contains('page_private_helper'));
     });
 
-    test('reports shared public constants and inline network endpoints outside core constants', () {
-      final project = TestProject.create();
-      addTearDown(project.dispose);
-      project.write(
-        'lib/features/catalog/application/catalog_config.dart',
-        '''const kCatalogPageSize = 20;
+    test(
+      'reports shared public constants and inline network endpoints outside core constants',
+      () {
+        final project = TestProject.create();
+        addTearDown(project.dispose);
+        project.write(
+          'lib/features/catalog/application/catalog_config.dart',
+          '''const kCatalogPageSize = 20;
 const _apiBaseUrl = String.fromEnvironment('API_BASE_URL');
 ''',
-      );
-      project.write(
-        'lib/features/catalog/data/catalog_api.dart',
-        '''const apiBaseUrl = 'https://api.example.com/v1';
+        );
+        project.write(
+          'lib/features/catalog/data/catalog_api.dart',
+          '''const apiBaseUrl = 'https://api.example.com/v1';
 ''',
-      );
+        );
 
-      final report = QualityChecker(HarnessConfig.load(project.root)).check();
-      final rules = report.violations.map((item) => item.rule).toSet();
+        final report = QualityChecker(HarnessConfig.load(project.root)).check();
+        final rules = report.violations.map((item) => item.rule).toSet();
 
-      expect(rules, contains('shared_constant_location'));
-      expect(rules, contains('network_constant_location'));
-    });
+        expect(rules, contains('shared_constant_location'));
+        expect(rules, contains('network_constant_location'));
+      },
+    );
 
     test('allows core constants and private file-local constants', () {
       final project = TestProject.create();
@@ -475,7 +478,9 @@ final class RecorderCubit extends Cubit<RecorderState> {
       final rules = report.violations.map((item) => item.rule).toSet();
       final sizeMessage = report.violations.singleWhere((item) => item.rule == 'state_manager_too_large').message;
       final hiddenMessage = report.violations
-          .singleWhere((item) => item.rule == 'state_manager_hidden_mutable_state')
+          .singleWhere(
+            (item) => item.rule == 'state_manager_hidden_mutable_state',
+          )
           .message;
 
       expect(rules, contains('state_manager_too_large'));
@@ -696,7 +701,6 @@ FeatureTemplates _templates(String stateStyle) {
     stateStyle: stateStyle,
     featurePackageRoot: stateStyle == 'sealed' ? 'features/notifications' : 'features/search',
     sharedDomainPackageRoot: 'shared/domain',
-    failureMapperPackagePath: 'core/errors/failure_mapper.dart',
     designTokensPackagePath: 'core/design_system/tokens/tokens.dart',
     localizationsPackagePath: 'core/l10n/app_localizations.dart',
     localizationsClass: 'AppLocalizations',
