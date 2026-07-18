@@ -10,7 +10,7 @@ Wrapping an application exception inside a transport exception allows raw infras
 
 ## Decision
 
-Repository ports return `AppResult<T>`. Repository implementations catch transport/persistence exceptions and map them to `AppFailure` before returning.
+Repository ports return `AppResult<T>`. Repository implementations catch transport/persistence exceptions and map them to `AppFailure` before returning. Stateless deterministic mapping is feature-local and invoked directly; an injected mapper contract requires genuinely variable production policy, state, dependencies, or side effects.
 
 ## Consequences
 

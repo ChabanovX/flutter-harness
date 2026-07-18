@@ -16,24 +16,28 @@ void main() {
     expect(code, 0);
     expect(
       File(
-        p.join(
-          project.root.path,
-          'lib/core/design_system/tokens/tokens.dart',
-        ),
+        p.join(project.root.path, 'lib/core/design_system/tokens/tokens.dart'),
       ).existsSync(),
       isTrue,
     );
     expect(
-      File(p.join(project.root.path, 'lib/core/constants/ui_constants.dart')).existsSync(),
-      isTrue,
-    );
-    expect(
-      File(p.join(project.root.path, 'lib/core/constants/network_constants.dart')).existsSync(),
+      File(
+        p.join(project.root.path, 'lib/core/constants/ui_constants.dart'),
+      ).existsSync(),
       isTrue,
     );
     expect(
       File(
-        p.join(project.root.path, 'lib/core/design_system/tokens/app_spacing.dart'),
+        p.join(project.root.path, 'lib/core/constants/network_constants.dart'),
+      ).existsSync(),
+      isTrue,
+    );
+    expect(
+      File(
+        p.join(
+          project.root.path,
+          'lib/core/design_system/tokens/app_spacing.dart',
+        ),
       ).readAsStringSync(),
       contains("import '../../constants/ui_constants.dart';"),
     );
@@ -43,12 +47,22 @@ void main() {
       isTrue,
     );
     expect(
-      File(p.join(project.root.path, 'lib/core/logging/app_logger.dart')).existsSync(),
+      File(
+        p.join(project.root.path, 'lib/core/logging/app_logger.dart'),
+      ).existsSync(),
       isTrue,
     );
     expect(
-      File(p.join(project.root.path, 'lib/shared/domain/error_reporter.dart')).existsSync(),
+      File(
+        p.join(project.root.path, 'lib/shared/domain/error_reporter.dart'),
+      ).existsSync(),
       isTrue,
+    );
+    expect(
+      File(
+        p.join(project.root.path, 'lib/core/errors/failure_mapper.dart'),
+      ).existsSync(),
+      isFalse,
     );
     expect(
       Directory(p.join(project.root.path, 'lib/app/navigation')).existsSync(),

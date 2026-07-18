@@ -42,9 +42,8 @@ final class FeatureScaffolder {
       naming: naming,
       stateStyle: stateStyle,
       featurePackageRoot: config.project.packagePath(featureBase),
-      sharedDomainPackageRoot: config.project.packagePath(config.project.sharedDomainRoot),
-      failureMapperPackagePath: config.project.packagePath(
-        p.posix.join(config.project.coreRoot, 'errors/failure_mapper.dart'),
+      sharedDomainPackageRoot: config.project.packagePath(
+        config.project.sharedDomainRoot,
       ),
       designTokensPackagePath: config.project.packagePath(
         config.quality.designTokensPath,
@@ -57,10 +56,7 @@ final class FeatureScaffolder {
     final testBase = p.posix.join('test/features', naming.featureSnake);
 
     final files = <String, String>{
-      p.posix.join(
-        featureBase,
-        'domain/entities/${naming.entitySnake}.dart',
-      ): templates.domainEntity,
+      p.posix.join(featureBase, 'domain/entities/${naming.entitySnake}.dart'): templates.domainEntity,
       p.posix.join(
         featureBase,
         'application/ports/${naming.featureSnake}_repository.dart',
@@ -69,14 +65,15 @@ final class FeatureScaffolder {
         featureBase,
         'application/queries/get_${naming.featureSnake}.dart',
       ): templates.query,
-      p.posix.join(
-        featureBase,
-        'data/dto/${naming.entitySnake}_dto.dart',
-      ): templates.dto,
+      p.posix.join(featureBase, 'data/dto/${naming.entitySnake}_dto.dart'): templates.dto,
       p.posix.join(
         featureBase,
         'data/mappers/${naming.entitySnake}_mapper.dart',
       ): templates.mapper,
+      p.posix.join(
+        featureBase,
+        'data/mappers/${naming.featureSnake}_failure_mapper.dart',
+      ): templates.failureMapper,
       p.posix.join(
         featureBase,
         'data/datasources/${naming.featureSnake}_remote_data_source.dart',
@@ -101,6 +98,10 @@ final class FeatureScaffolder {
         testBase,
         'data/mappers/${naming.entitySnake}_mapper_test.dart',
       ): templates.mapperTest,
+      p.posix.join(
+        testBase,
+        'data/mappers/${naming.featureSnake}_failure_mapper_test.dart',
+      ): templates.failureMapperTest,
       p.posix.join(
         testBase,
         'application/queries/get_${naming.featureSnake}_test.dart',

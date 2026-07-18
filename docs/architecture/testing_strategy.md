@@ -4,7 +4,7 @@
 
 ### Pure unit tests
 
-Test domain invariants, value objects, mappers, and application orchestration.
+Test domain invariants, value objects, production mapping policies, and application orchestration.
 
 ### Cubit tests
 
@@ -12,7 +12,7 @@ Test state sequences, retries, stale-response handling, pagination guards, optim
 
 ### Repository contract tests
 
-Use the real DTO mapping and repository implementation over a fake/mock transport or persistence adapter. Do not replace the repository with a mock in every test.
+Use the real DTO and failure mapping policies with the repository implementation over a fake/mock transport or persistence adapter. Fake the effectful boundary, not deterministic mapping logic. Do not replace the repository with a mock in every test.
 
 ### Widget scenario tests
 

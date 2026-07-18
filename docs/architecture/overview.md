@@ -93,6 +93,8 @@ Both modes keep page/screen construction and Bloc providers in configured app co
 
 There is one public composition entry point, split into core and feature registration modules. Registration constructs the graph; startup performs side effects. Page Cubits are factories unless their product lifetime explicitly requires otherwise.
 
+Inject effectful collaborators, resources with owned lifetimes, and policies that composition genuinely selects at runtime. Keep stateless deterministic transformations, including ordinary DTO and failure mapping, as direct static calls. Do not introduce mapper interfaces solely so tests can replace production mapping logic.
+
 ## Caching
 
 Caching is an opt-in repository policy. Presentation never branches on memory/disk/network origin. Start with the simplest policy that satisfies offline and latency requirements; add persistent/SWR behavior only for specific queries.
