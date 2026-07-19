@@ -25,6 +25,7 @@
 - Dependencies are resolved only in `app/di`, route/provider factories, and generated feature registration modules.
 - Transport and persistence errors are converted to `AppFailure` before leaving `data/`.
 - Stateless deterministic mappers are non-instantiable static namespaces. Introduce and inject a mapper contract only when composition selects among genuinely different runtime policies or the mapper owns state, dependencies, or side effects.
+- When a declaration is public only to support tests, keep `meta` as a direct dependency and annotate that declaration with `@visibleForTesting`.
 - DTOs and JSON/wire details never leave `data/`.
 - Widgets do not initiate I/O or mutate Cubits from `build()`.
 - Cross-feature imports are forbidden by default. Coordinate through shared contracts or an app-level coordinator.
