@@ -77,7 +77,8 @@ formatter:
     final rendered = installer.renderAgentInstructions(
       'Read `docs/architecture/overview.md` and '
       '`docs/architecture/commenting.md`, then '
-      '`docs/architecture/navigation.md` first.',
+      '`docs/architecture/navigation.md` and '
+      '`docs/architecture/readability.md` first.',
       installer.defaultSubmodulePath,
     );
 
@@ -95,6 +96,12 @@ formatter:
       rendered,
       contains(
         '`tool/flutter_agentic_harness/docs/architecture/navigation.md`',
+      ),
+    );
+    expect(
+      rendered,
+      contains(
+        '`tool/flutter_agentic_harness/docs/architecture/readability.md`',
       ),
     );
   });
@@ -340,6 +347,7 @@ void _copyHarnessInstallFixture({
     '.agent_harness/baseline.json',
     'analysis_options.harness.snippet.yaml',
     'docs/architecture/navigation.md',
+    'docs/architecture/readability.md',
     'tool/agent_harness/pubspec.yaml',
   ];
   for (final path in [...baseFiles, ...installer.harnessCodexRequiredFiles]) {

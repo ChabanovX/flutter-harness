@@ -121,7 +121,7 @@ dart run tool/harness.dart scaffold feature notifications --entity notification
 
 The scaffolder creates domain, application, data, presentation, DI-registration, and test files. Generated DTO and failure mappers are feature-local static policies; repositories call them directly instead of resolving deterministic transformations through DI. Generated pages read copy from `AppLocalizations` and spacing from the design token extension. It does not invent the concrete HTTP implementation or edit the router automatically; those are intentionally explicit integration steps. Shared constants belong in `core/constants`, while file-local constants stay private next to their usage. Screen navigation belongs in the router/composition layer: feature UI should dispatch typed navigation intent instead of constructing routes or calling `Navigator.push`/`GoRouter` directly.
 
-Invoke `$harness-review` explicitly when a branch or working tree needs a semantic review against the harness contract. The skill runs changed-scope verification, selects only the relevant boundary, async-state, UI/navigation, test, composition, and comment-policy reviewers, and independently verifies candidate findings. Review agents are read-only and do not modify the application.
+Invoke `$harness-review` explicitly when a branch or working tree needs a semantic review against the harness contract. The skill runs changed-scope verification, selects only the relevant boundary, async-state, UI/navigation, test, composition, readability, and comment-policy reviewers, and independently verifies candidate findings. Review agents are read-only and do not modify the application.
 
 ## Rejected code and expected replacements
 
@@ -130,7 +130,7 @@ The harness does not rewrite application code. Enforcement happens in two stages
 1. `dart run tool/harness.dart verify --changed` deterministically rejects analyzer, architecture, quality, and test failures.
 2. `$harness-review` runs that preflight and then reports semantic defects that static analysis cannot prove. A clean preflight is not a substitute for a clean review.
 
-The following examples show the shape an agent should write instead of preserving a rejected pattern. Full rules live in [dependency rules](docs/architecture/dependency_rules.md), [error policy](docs/architecture/error_policy.md), [navigation architecture](docs/architecture/navigation.md), and [state patterns](docs/architecture/state_patterns.md).
+The following examples show the shape an agent should write instead of preserving a rejected pattern. Full rules live in [dependency rules](docs/architecture/dependency_rules.md), [error policy](docs/architecture/error_policy.md), [navigation architecture](docs/architecture/navigation.md), [state patterns](docs/architecture/state_patterns.md), and [stateful orchestrator readability](docs/architecture/readability.md).
 
 ### Static checks
 
@@ -284,10 +284,11 @@ The skill selects only the review agents relevant to the changed paths:
 | `harness-ui-navigation` | Pure widget builds, UI state coverage, typed intent, router authority, and provider lifetime |
 | `harness-tests-behavior` | Behavior matrices, repository-boundary coverage, race tests, widget scenarios, and deterministic tests |
 | `harness-composition` | DI placement, dependency ownership, startup and shutdown, registration reachability, and adapter lifetime |
+| `harness-readability` | Cold-read responsibility, lifecycle phases, readiness gates, async/resource ownership, invalidation, cleanup order, and cohesive extraction seams |
 | `harness-comments-policy` | Dartdoc, rationale comments, TODOs, suppressions, commented-out code, and localization metadata |
 | `harness-finding-verifier` | Accepts, rejects, merges, or reclassifies candidate findings before they reach the final report |
 
-The first six agents are selected from the diff. `harness-finding-verifier` runs only when they produce candidate findings.
+The first seven agents are selected from the diff. `harness-finding-verifier` runs only when they produce candidate findings. Readability size and ownership signals select a cold semantic review; they are not deterministic failures and do not require a mechanical split.
 
 #### Separate dependency registration from runtime startup
 
@@ -391,6 +392,40 @@ Future<void> _onMutation(
   }
 }
 ```
+
+#### Make stateful orchestration cold-readable
+
+Reviewed by `harness-readability`.
+
+Rejected in review when surrounding ownership is unclear: lifecycle methods use
+generic verb piles, and the completion callback does not say which task slot it
+may clear.
+
+```dart
+await _startFrameSourceOpen();
+
+_inferenceFuture = replayFuture;
+replayFuture.whenComplete(
+  () => _releaseInferenceFuture(replayFuture),
+);
+```
+
+Write names that expose the guard and ownership contract, then reserve comments
+for any invariant the names cannot carry:
+
+```dart
+await _openFrameSourceIfNeeded();
+
+_activeReplayTask = replayTask;
+replayTask.whenComplete(
+  () => _clearActiveReplayTaskOnCompletion(replayTask),
+);
+```
+
+This local improvement does not exempt a large controller from review. The
+reviewer still reconstructs its responsibility, phases, readiness gates,
+stale-result policy, retry path, and shutdown order, and reports a finding only
+when an ambiguity has a credible failure mode.
 
 ## Harness self-checks
 

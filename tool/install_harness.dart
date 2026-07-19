@@ -17,6 +17,7 @@ const harnessCodexRequiredFiles = [
   '.agents/skills/harness-review/references/comments-policy.md',
   '.agents/skills/harness-review/references/composition.md',
   '.agents/skills/harness-review/references/finding-verifier.md',
+  '.agents/skills/harness-review/references/readability.md',
   '.agents/skills/harness-review/references/review-contract.md',
   '.agents/skills/harness-review/references/tests-behavior.md',
   '.agents/skills/harness-review/references/ui-navigation.md',
@@ -25,6 +26,7 @@ const harnessCodexRequiredFiles = [
   '.codex/agents/harness-comments-policy.toml',
   '.codex/agents/harness-composition.toml',
   '.codex/agents/harness-finding-verifier.toml',
+  '.codex/agents/harness-readability.toml',
   '.codex/agents/harness-tests-behavior.toml',
   '.codex/agents/harness-ui-navigation.toml',
 ];
@@ -259,6 +261,7 @@ final class HarnessInstaller {
       '.agent_harness/baseline.json',
       'analysis_options.harness.snippet.yaml',
       'docs/architecture/navigation.md',
+      'docs/architecture/readability.md',
       'tool/agent_harness/pubspec.yaml',
       ...harnessCodexRequiredFiles,
     ];
@@ -569,6 +572,10 @@ String renderAgentInstructions(String source, String submodulePath) {
       .replaceAll(
         'docs/architecture/navigation.md',
         '$path/docs/architecture/navigation.md',
+      )
+      .replaceAll(
+        'docs/architecture/readability.md',
+        '$path/docs/architecture/readability.md',
       );
 }
 

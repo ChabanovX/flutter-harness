@@ -19,6 +19,7 @@ void main() {
       expect(File('tool/harness.dart').existsSync(), isTrue);
       expect(File('tool/agent_harness/pubspec.yaml').existsSync(), isTrue);
       expect(File('docs/architecture/navigation.md').existsSync(), isTrue);
+      expect(File('docs/architecture/readability.md').existsSync(), isTrue);
       for (final path in installer.harnessCodexRequiredFiles) {
         expect(File(path).existsSync(), isTrue, reason: '$path is missing');
       }
@@ -49,6 +50,9 @@ void main() {
     final asyncStateRole = File(
       '.agents/skills/harness-review/references/async-state.md',
     ).readAsStringSync();
+    final readabilityRole = File(
+      '.agents/skills/harness-review/references/readability.md',
+    ).readAsStringSync();
     expect(
       skill,
       contains(
@@ -59,6 +63,11 @@ void main() {
     expect(skillMetadata, contains('allow_implicit_invocation: false'));
     expect(asyncStateRole, contains('private queue'));
     expect(asyncStateRole, contains('global serialization'));
+    expect(skill, contains('harness-readability'));
+    expect(skill, contains('350 lines'));
+    expect(readabilityRole, contains('cold_read:'));
+    expect(readabilityRole, contains('reasons_to_keep_together'));
+    expect(readabilityRole, contains('never as findings'));
 
     for (final path in installer.harnessCodexRequiredFiles) {
       final content = File(path).readAsStringSync();
