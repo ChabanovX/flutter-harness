@@ -110,3 +110,8 @@ The harness consists of:
 - deterministic feature scaffolding;
 - changed-scope and full verification commands;
 - reference test expectations.
+
+Stateful orchestrators also follow the
+[readability contract](readability.md). Its size and ownership signals select a
+cold semantic review; they do not impose a line-count failure or require a
+mechanical class split.

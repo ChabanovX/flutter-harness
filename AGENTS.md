@@ -7,6 +7,9 @@
    localization metadata, also read `docs/architecture/commenting.md`.
    For navigation, page composition, or Bloc/Provider lifetime changes, also
    read `docs/architecture/navigation.md`.
+   For a stateful controller, adapter, coordinator, service, Cubit, or Bloc that
+   crosses a semantic review signal, also read
+   `docs/architecture/readability.md`.
 2. Inspect an existing feature with the same state and data-flow shape.
 3. Define the behavioral acceptance criteria, including loading, empty, failure, retry, and offline behavior where applicable.
 4. Keep the change inside one vertical slice unless the task explicitly changes a shared contract.
@@ -51,6 +54,20 @@
 - Prefer Bloc with explicit events and `bloc_concurrency` transformers when a Cubit would otherwise implement a private scheduler across multiple asynchronous commands. Retain Cubit for simple method-local guards or when awaitable commands provide a documented product benefit.
 - Guard emissions after asynchronous gaps and cancel subscriptions/timers in `close()`.
 - Avoid Cubit-to-Cubit injection. Prefer repository state, typed update streams, or an explicit presentation coordinator.
+
+## Readability conventions
+
+- Stateful orchestrators must expose their responsibility, lifecycle phases,
+  readiness gates, async/resource ownership, stale-result policy, and
+  retry/close ordering through names, structure, focused rationale, and tests.
+- A class with at least 350 lines, 18 methods, 12 instance fields, or 3 owned
+  async/lifecycle mechanisms receives semantic readability review. These are
+  review-selection signals, not automatic violations or extraction mandates.
+- Rename vague lifecycle operations before documenting them. Comment private
+  methods only when an invariant, race, fallback, or ownership rule remains
+  non-obvious after naming and extraction.
+- Extract only cohesive state and resource ownership behind a narrow contract;
+  do not replace one large class with helpers that share its mutable internals.
 
 ## Commenting conventions
 
