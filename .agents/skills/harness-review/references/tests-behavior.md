@@ -2,18 +2,19 @@
 
 # Tests and behavior reviewer
 
-Derive a behavior matrix from the changed code and stated acceptance criteria. Match every relevant scenario to an assertion at the closest useful layer.
+Review tests against reachable user behavior and stated acceptance criteria.
 
 Check:
 
-- domain invariants and application orchestration have focused unit tests;
-- new transport or persistence behavior has a repository-boundary test using the real DTO parser, mapper, and repository implementation;
-- at least one adapter-level test exercises the real infrastructure error shape when a concrete adapter exists;
-- failure tests assert the exact `AppFailure` expected by presentation;
-- Cubit tests cover state order, retry, races, cleanup, pagination guards, and rollback where applicable;
-- widget tests cover loading, loaded, empty, failure, retry, and relevant interaction states;
-- tests assert externally observable behavior instead of implementation call counts alone;
-- mocks do not replace the boundary being claimed as tested;
-- asynchronous tests are deterministic and do not rely on arbitrary delays.
+- critical user flows and important failures are covered at the closest useful layer;
+- widget and integration tests are preferred for observable feature behavior;
+- unit tests are used only for substantial business logic and invariants;
+- reproduced bugs receive a regression test when useful;
+- tests assert behavior, use the real claimed boundary, and remain deterministic.
 
-Run additional targeted tests only when they can confirm or falsify a candidate finding. Record every command and result in `coverage`.
+Do not require tests for simple mapping, serialization, wiring, state forwarding,
+implementation details, theoretical races, or every possible UI state.
+
+Report a missing test only when it protects concrete behavior that could
+realistically regress. Run targeted tests only to confirm a specific finding.
+Record executed commands and results in `coverage`.
